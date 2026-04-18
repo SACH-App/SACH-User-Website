@@ -1,121 +1,89 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { LanguageProvider } from './LanguageContext';
+import { FirProvider } from './stores/FirStore';
+import { AlertProvider } from './stores/AlertStore';
+import { UserProvider } from './stores/UserStore';
+import Sidebar from './components/Sidebar';
+import Header from './components/Header';
+import SplashPage from './pages/SplashPage';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+import DashboardPage from './pages/DashboardPage';
+import MyFirsPage from './pages/MyFirsPage';
+import FileFirPage from './pages/FileFirPage';
+import FirDetailPage from './pages/FirDetailPage';
+import AlertsPage from './pages/AlertsPage';
+import ProfilePage from './pages/ProfilePage';
+import EditProfilePage from './pages/EditProfilePage';
+import { useLanguage } from './LanguageContext';
 
-function App() {
-  const [count, setCount] = useState(0)
+// Page title mapping for the header
+const pageTitles = {
+  '/dashboard': 'goToDashboard',
+  '/dashboard/my-firs': 'myComplaints',
+  '/dashboard/file-fir': 'fileFir',
+  '/dashboard/alerts': 'alertsTitle',
+  '/dashboard/profile': 'profileTitle',
+  '/dashboard/edit-profile': 'editProfile',
+};
+
+const DashboardLayout = ({ children }) => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { t } = useLanguage();
+
+  // Determine title from current path
+  const path = window.location.pathname;
+  const titleKey = pageTitles[path] || 'goToDashboard';
+  const title = t(titleKey);
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="app-layout">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="app-main">
+        <Header
+          title={title}
+          onMenuClick={() => setSidebarOpen(true)}
+        />
+        <div className="app-main-content">
+          {children}
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      </div>
+    </div>
+  );
+};
 
-      <div className="ticks"></div>
+function App() {
+  return (
+    <LanguageProvider>
+      <UserProvider>
+        <FirProvider>
+          <AlertProvider>
+            <BrowserRouter>
+              <Routes>
+                {/* Auth routes */}
+                <Route path="/" element={<SplashPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+                {/* Dashboard routes */}
+                <Route path="/dashboard" element={<DashboardLayout><DashboardPage /></DashboardLayout>} />
+                <Route path="/dashboard/my-firs" element={<DashboardLayout><MyFirsPage /></DashboardLayout>} />
+                <Route path="/dashboard/file-fir" element={<DashboardLayout><FileFirPage /></DashboardLayout>} />
+                <Route path="/dashboard/fir/:firId" element={<DashboardLayout><FirDetailPage /></DashboardLayout>} />
+                <Route path="/dashboard/alerts" element={<DashboardLayout><AlertsPage /></DashboardLayout>} />
+                <Route path="/dashboard/profile" element={<DashboardLayout><ProfilePage /></DashboardLayout>} />
+                <Route path="/dashboard/edit-profile" element={<DashboardLayout><EditProfilePage /></DashboardLayout>} />
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+                {/* Catch-all */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </BrowserRouter>
+          </AlertProvider>
+        </FirProvider>
+      </UserProvider>
+    </LanguageProvider>
+  );
 }
 
-export default App
+export default App;
