@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { colors, formatCnic, validators, ShieldIcon, IdCardIcon, UserIcon, PhoneIcon, CheckCircleIcon, HandIcon, MessageIcon, ArrowLeft, ShieldCheckIcon } from '../theme';
+import { colors, formatCnic, formatPhone, validators, ShieldIcon, IdCardIcon, UserIcon, PhoneIcon, CheckCircleIcon, MessageIcon, ArrowLeft, ShieldCheckIcon } from '../theme';
 
 const SignupPage = () => {
   const navigate = useNavigate();
   const [tab, setTab] = useState(0);
   const [name, setName] = useState('');
   const [cnic, setCnic] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState('+92 ');
   const [errors, setErrors] = useState({});
-  const [showBioModal, setShowBioModal] = useState(false);
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otp, setOtp] = useState('');
 
@@ -22,13 +21,12 @@ const SignupPage = () => {
     const errs = {};
     if (!validators.minLength(name, 3)) errs.name = 'Full name must be at least 3 characters';
     if (!validators.cnic(cnic)) errs.cnic = tab === 0 ? 'Enter valid CNIC (e.g., 42101-1234567-8)' : 'Enter valid NICOP number';
-    if (!validators.phone(phone)) errs.phone = 'Enter valid phone number (11+ digits)';
+    { const phoneDigits = phone.replace(/[^\d]/g, '').slice(2); if (!validators.phone(phoneDigits)) errs.phone = 'Enter valid 10-digit mobile number (e.g., 3001234567)'; }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  const handleRegister = () => { if (validate()) setShowBioModal(true); };
-  const handleBiometricSuccess = () => { setShowBioModal(false); setShowOtpModal(true); };
+  const handleRegister = () => { if (validate()) setShowOtpModal(true); };
   const handleOtpVerify = () => { if (otp.length === 6) { setShowOtpModal(false); navigate('/dashboard'); } };
 
   return (
@@ -49,7 +47,7 @@ const SignupPage = () => {
             <IdCardIcon size={26} color={colors.gold} />
           </div>
           <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 6 }}>Citizen Registration</h2>
-          <p style={{ fontSize: 13, color: colors.textSub }}>Register on SACH via NADRA e-KYC</p>
+          <p style={{ fontSize: 13, color: colors.textSub }}>Register on SACH securely</p>
         </div>
 
         {/* Tab selector */}
@@ -82,16 +80,16 @@ const SignupPage = () => {
         <label className="sach-label" style={{ marginTop: errors.cnic ? 12 : 0 }}>Mobile Number</label>
         <div className="sach-input-icon" style={{ marginBottom: errors.phone ? 4 : 16 }}>
           <span className="icon-left"><PhoneIcon size={16} color={colors.gold} /></span>
-          <input className="sach-input" placeholder="3001234567" value={phone} onChange={(e) => setPhone(e.target.value.replace(/[^\d]/g, '').slice(0, 11))} />
+          <input className="sach-input" placeholder="+92 3001234567" value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))} maxLength={14} />
         </div>
         {errors.phone && <p className="field-error">{errors.phone}</p>}
 
         <div className="notice-box green" style={{ marginTop: 8, marginBottom: 24 }}>
           <CheckCircleIcon size={14} color={colors.green} />
           <div>
-            <span style={{ fontSize: 12, fontWeight: 700, color: colors.green }}>NADRA e-KYC Verification</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: colors.green }}>Identity Verification</span>
             <p style={{ fontSize: 11, color: colors.textSub, lineHeight: 1.5, marginTop: 4 }}>
-              Your identity will be verified through NADRA's biometric system. After successful verification, an OTP will be sent to your registered number.
+              Your identity will be verified via SMS OTP sent to your registered mobile number.
             </p>
           </div>
         </div>
@@ -108,16 +106,7 @@ const SignupPage = () => {
         </p>
       </div>
 
-      {showBioModal && (
-        <div className="modal-overlay" onClick={() => setShowBioModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ textAlign: 'center' }}>
-            <div className="modal-icon-circle pulse-anim"><HandIcon size={32} color={colors.gold} /></div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>NADRA Biometric Verification</h3>
-            <p style={{ fontSize: 13, color: colors.textSub, marginBottom: 24 }}>Simulating fingerprint scan with NADRA database…</p>
-            <button className="sach-btn sach-btn-gradient" onClick={handleBiometricSuccess}><CheckCircleIcon size={16} /> Verification Successful</button>
-          </div>
-        </div>
-      )}
+
 
       {showOtpModal && (
         <div className="modal-overlay" onClick={() => setShowOtpModal(false)}>
@@ -125,7 +114,7 @@ const SignupPage = () => {
             <div style={{ textAlign: 'center' }}>
               <div className="modal-icon-circle"><MessageIcon size={28} color={colors.gold} /></div>
               <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>SMS Verification</h3>
-              <p style={{ fontSize: 13, color: colors.textSub, marginBottom: 24 }}>Enter the 6-digit code sent to +92 {phone}</p>
+              <p style={{ fontSize: 13, color: colors.textSub, marginBottom: 24 }}>Enter the 6-digit code sent to {phone}</p>
             </div>
             <input className="sach-input" placeholder="000000" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g,'').slice(0,6))} maxLength={6}
               style={{ textAlign: 'center', fontSize: 24, letterSpacing: 12, fontWeight: 700 }} />

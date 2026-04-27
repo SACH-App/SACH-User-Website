@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { colors, cities, validators, UserIcon, IdCardIcon, LockIcon, PhoneIcon, MailIcon, MapPinIcon, HomeIcon, SaveIcon, InfoIcon, ArrowLeft, CheckCircleIcon } from '../theme';
+import { colors, cities, validators, formatPhone, UserIcon, IdCardIcon, LockIcon, PhoneIcon, MailIcon, MapPinIcon, HomeIcon, SaveIcon, InfoIcon, ArrowLeft, CheckCircleIcon } from '../theme';
 import { useLanguage } from '../LanguageContext';
 import { useUser } from '../stores/UserStore';
 
@@ -16,7 +16,7 @@ const EditProfilePage = () => {
   const validate = () => {
     const errs = {};
     if (form.email && !validators.email(form.email)) errs.email = 'Enter a valid email';
-    if (form.altPhone && !validators.phone(form.altPhone)) errs.altPhone = 'Enter a valid phone number';
+    if (form.altPhone && form.altPhone !== '+92 ') { const phoneDigits = form.altPhone.replace(/[^\d]/g, '').slice(2); if (!validators.phone(phoneDigits)) errs.altPhone = 'Enter a valid 10-digit mobile number'; }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -29,7 +29,7 @@ const EditProfilePage = () => {
     }
   };
 
-  // Locked fields (NADRA verified — not editable)
+  // Locked fields (identity verified — not editable)
   const lockedFields = [
     { icon: <UserIcon size={16} color={colors.gold} />, label: 'Full Name', value: form.fullName },
     { icon: <IdCardIcon size={16} color={colors.gold} />, label: 'CNIC Number', value: form.cnic },
@@ -41,13 +41,13 @@ const EditProfilePage = () => {
         <ArrowLeft size={16} /> Back to Profile
       </button>
 
-      {/* NADRA notice */}
+      {/* Locked fields notice */}
       <div className="notice-box green" style={{ marginBottom: 24 }}>
         <LockIcon size={14} color={colors.green} />
         <div>
-          <span style={{ fontSize: 12, fontWeight: 700, color: colors.green }}>NADRA Verified Fields</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: colors.green }}>Verified Fields</span>
           <p style={{ fontSize: 11, color: colors.textSub, lineHeight: 1.5, marginTop: 4 }}>
-            Name and CNIC are locked as they are verified through NADRA. To update these, visit your nearest NADRA office.
+            Name and CNIC are locked as they are verified. These fields cannot be modified.
           </p>
         </div>
       </div>
@@ -69,7 +69,7 @@ const EditProfilePage = () => {
         <label className="sach-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><PhoneIcon size={14} color={colors.gold} /> Alternate Phone</label>
         <div className="sach-input-icon" style={{ marginBottom: errors.altPhone ? 4 : 16 }}>
           <span className="icon-left"><PhoneIcon size={16} color={colors.gold} /></span>
-          <input className="sach-input" placeholder="e.g., 03001234567" value={form.altPhone} onChange={(e) => onChange('altPhone', e.target.value)} />
+          <input className="sach-input" placeholder="+92 3001234567" value={form.altPhone || '+92 '} onChange={(e) => onChange('altPhone', formatPhone(e.target.value))} maxLength={14} onFocus={(e) => { if (!e.target.value || e.target.value.trim() === '') onChange('altPhone', '+92 '); }} />
         </div>
         {errors.altPhone && <p className="field-error">{errors.altPhone}</p>}
 

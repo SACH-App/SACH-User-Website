@@ -123,7 +123,7 @@ const Header = ({ title, onMenuClick }) => {
             </div>
             <div style={{ textAlign: 'right' }}>
               <p style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{profile.fullName}</p>
-              <p style={{ fontSize: 10, color: colors.textSub }}>{t('nadraVerified')}</p>
+              <p style={{ fontSize: 10, color: colors.textSub }}>{t('verifiedCitizen')}</p>
             </div>
             <ChevronDown color={colors.textSub} />
           </div>
