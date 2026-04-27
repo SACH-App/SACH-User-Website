@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { colors, formatCnic, validators, ShieldIcon, LockIcon, IdCardIcon, KeyIcon, EyeIcon, EyeOffIcon, UnlockIcon, MessageIcon, HandIcon, ArrowLeft } from '../theme';
+import { colors, formatCnic, validators, ShieldIcon, LockIcon, IdCardIcon, KeyIcon, EyeIcon, EyeOffIcon, UnlockIcon, MessageIcon, ArrowLeft } from '../theme';
 import { useLanguage } from '../LanguageContext';
 
 const LoginPage = () => {
@@ -11,7 +11,6 @@ const LoginPage = () => {
   const [showPass, setShowPass] = useState(false);
   const [errors, setErrors] = useState({});
   const [showOtpModal, setShowOtpModal] = useState(false);
-  const [showBioModal, setShowBioModal] = useState(false);
   const [otp, setOtp] = useState('');
 
   const handleCnicChange = (e) => {
@@ -29,7 +28,6 @@ const LoginPage = () => {
 
   const handleLogin = () => { if (validate()) navigate('/dashboard'); };
   const handleOtpVerify = () => { if (otp.length === 6) { setShowOtpModal(false); navigate('/dashboard'); } };
-  const handleBiometric = () => { setShowBioModal(false); navigate('/dashboard'); };
 
   return (
     <div className="auth-page">
@@ -81,9 +79,6 @@ const LoginPage = () => {
           <button className="sach-btn sach-btn-outline" onClick={() => setShowOtpModal(true)} style={{ flex: 1 }}>
             <MessageIcon size={16} /> SMS OTP
           </button>
-          <button className="sach-btn sach-btn-outline" onClick={() => setShowBioModal(true)} style={{ flex: 1 }}>
-            <HandIcon size={16} /> Biometric
-          </button>
         </div>
 
         <p style={{ textAlign: 'center', marginTop: 28, fontSize: 13, color: colors.textSub }}>
@@ -109,18 +104,7 @@ const LoginPage = () => {
         </div>
       )}
 
-      {showBioModal && (
-        <div className="modal-overlay" onClick={() => setShowBioModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ textAlign: 'center' }}>
-            <div className="modal-icon-circle pulse-anim"><HandIcon size={32} color={colors.gold} /></div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Biometric Verification</h3>
-            <p style={{ fontSize: 13, color: colors.textSub, marginBottom: 24 }}>Simulating NADRA biometric verification…</p>
-            <button className="sach-btn sach-btn-gradient" onClick={handleBiometric}>
-              <CheckCircleIcon size={16} /> Simulate Success
-            </button>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 };

@@ -23,7 +23,7 @@ const DashboardPage = () => {
         <div style={{ flex: 1 }}>
           <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 2 }}>{profile.fullName}</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span className="verified-chip"><CheckCircleIcon size={12} color={colors.emerald} /> {t('nadraVerified')}</span>
+            <span className="verified-chip"><CheckCircleIcon size={12} color={colors.emerald} /> {t('verifiedCitizen')}</span>
             <span style={{ fontSize: 11, color: colors.textSub }}>{profile.cnic}</span>
           </div>
         </div>

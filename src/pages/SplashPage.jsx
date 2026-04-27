@@ -35,7 +35,7 @@ const SplashPage = () => {
       }}>
         {[
           { icon: <LockIcon size={14} color={colors.gold} />, label: 'End-to-End Encrypted' },
-          { icon: <CheckCircleIcon size={14} color={colors.gold} />, label: 'NADRA Verified' },
+          { icon: <CheckCircleIcon size={14} color={colors.gold} />, label: 'Identity Verified' },
           { icon: <LinkIcon size={14} color={colors.gold} />, label: 'Blockchain Secured' },
         ].map((badge, i) => (
           <div key={i} className="trust-badge hoverable" style={{
@@ -57,10 +57,10 @@ const SplashPage = () => {
           WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
         }}>Citizens e-FIR Portal</p>
         <p style={{ fontSize: 12, color: colors.textSub, marginBottom: 28, lineHeight: 1.6 }}>
-          File your complaints securely online with NADRA<br />biometric verification &amp; blockchain tamper-proofing
+          File your complaints securely online with<br />identity verification &amp; blockchain tamper-proofing
         </p>
         <button className="sach-btn sach-btn-splash" onClick={() => navigate('/signup')} style={{ marginBottom: 12 }}>
-          <IdCardIcon size={16} /> Register via NADRA
+          <IdCardIcon size={16} /> Register as Citizen
         </button>
         <button className="sach-btn sach-btn-outline" onClick={() => navigate('/login')}>
           <KeyIcon size={16} /> Secure Login
@@ -70,7 +70,7 @@ const SplashPage = () => {
       {/* Footer */}
       <div className="splash-footer" style={{ position: 'relative', zIndex: 1, animation: 'fadeIn 2s ease' }}>
         <span className="splash-footer-dot" />
-        <span className="splash-footer-text">Secured via Hyperledger Fabric &middot; NADRA Integration</span>
+        <span className="splash-footer-text">Secured via Hyperledger Fabric</span>
       </div>
     </div>
   );

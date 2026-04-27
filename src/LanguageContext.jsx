@@ -17,7 +17,7 @@ const strings = {
   closed:             { en: 'Closed',                ur: 'بند' },
   underReview:        { en: 'Under Review',          ur: 'جائزہ' },
   verified:           { en: 'VERIFIED',              ur: 'تصدیق شدہ' },
-  nadraVerified:      { en: 'NADRA Verified',        ur: 'نادرا تصدیق شدہ' },
+  verifiedCitizen:    { en: 'Verified Citizen',       ur: 'تصدیق شدہ شہری' },
   logout:             { en: 'Logout',                ur: 'لاگ آؤٹ' },
   search:             { en: 'Search…',               ur: 'تلاش کریں…' },
 
@@ -84,7 +84,7 @@ const strings = {
   epCityHint:         { en: 'Enter city name',       ur: 'شہر کا نام' },
   epSaveChanges:      { en: 'Save Changes',          ur: 'تبدیلیاں محفوظ کریں' },
   epCancel:           { en: 'Cancel',                ur: 'منسوخ' },
-  epNadraNotice:      { en: 'Verified Account: Your Name and CNIC are locked via NADRA e-KYC and cannot be altered.', ur: 'تصدیق شدہ اکاؤنٹ: آپ کا نام اور شناختی کارڈ نادرا ای-کے وائی سی سے مقفل ہیں اور تبدیل نہیں کیے جا سکتے۔' },
+  epLockedNotice:     { en: 'Verified Account: Your Name and CNIC are locked and cannot be altered.', ur: 'تصدیق شدہ اکاؤنٹ: آپ کا نام اور شناختی کارڈ مقفل ہیں اور تبدیل نہیں کیے جا سکتے۔' },
 
   // File FIR
   fileFir:            { en: 'File e-FIR',            ur: 'ای-ایف آئی آر داخل کریں' },

@@ -61,13 +61,13 @@ const FirDetailPage = () => {
               <React.Fragment key={i}>
                 <div className="timeline-step">
                   <div className="timeline-circle" style={{
-                    background: done ? colors.green : 'rgba(9,21,9,0.3)',
-                    border: `2px solid ${done ? colors.green : colors.divider}`,
-                    boxShadow: i === activeStep ? '0 0 12px rgba(1,118,58,0.4)' : 'none',
+                    background: done ? colors.green : 'rgba(255,255,255,0.06)',
+                    border: `2px solid ${done ? colors.green : 'rgba(255,255,255,0.15)'}`,
+                    boxShadow: i === activeStep ? '0 0 14px rgba(1,118,58,0.5)' : 'none',
                   }}>{pipelineIcons[i]}</div>
-                  <span className="timeline-label" style={{ color: done ? '#fff' : colors.textSub, fontWeight: i === activeStep ? 700 : 400 }}>{label}</span>
+                  <span className="timeline-label" style={{ color: done ? '#fff' : 'rgba(255,255,255,0.45)', fontWeight: i === activeStep ? 700 : 500 }}>{label}</span>
                 </div>
-                {i < pipelineLabels.length - 1 && <div className="timeline-line" style={{ background: i < activeStep ? colors.green : colors.divider }} />}
+                {i < pipelineLabels.length - 1 && <div className="timeline-line" style={{ background: i < activeStep ? colors.green : 'rgba(255,255,255,0.1)' }} />}
               </React.Fragment>
             );
           })}

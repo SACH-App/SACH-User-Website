@@ -25,7 +25,7 @@ const ProfilePage = () => {
       <div className="sach-card hoverable" style={{ textAlign: 'center', marginBottom: 24, padding: 28, background: `linear-gradient(135deg, ${colors.bgCard}, rgba(1,118,58,0.06))` }}>
         <div className="profile-avatar" style={{ width: 72, height: 72, margin: '0 auto 14px', fontSize: 28 }}><UserIcon size={32} color="#fff" /></div>
         <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>{profile.fullName}</h2>
-        <div className="verified-chip" style={{ display: 'inline-flex', marginTop: 6 }}><ShieldCheckIcon size={12} color={colors.emerald} /> {t('nadraVerified')}</div>
+        <div className="verified-chip" style={{ display: 'inline-flex', marginTop: 6 }}><ShieldCheckIcon size={12} color={colors.emerald} /> {t('verifiedCitizen')}</div>
         <p style={{ fontSize: 11, color: colors.textSub, marginTop: 8, letterSpacing: 1 }}>{profile.cnic}</p>
         <button className="sach-btn sach-btn-outline" style={{ width: 'auto', padding: '10px 20px', marginTop: 16, fontSize: 13 }} onClick={() => navigate('/dashboard/edit-profile')}>
           <EditIcon size={14} /> {t('editProfile')}
