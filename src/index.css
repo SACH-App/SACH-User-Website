@@ -120,6 +120,16 @@ input, select, textarea { font-family: var(--font); }
 }
 .sach-input:focus { border-color: var(--green); }
 .sach-input::placeholder { color: var(--text-sub); }
+
+/* Fix Chrome autofill white background */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+    transition: background-color 5000s ease-in-out 0s;
+    -webkit-text-fill-color: #fff !important;
+}
+
 .sach-input-icon {
   position: relative;
 }

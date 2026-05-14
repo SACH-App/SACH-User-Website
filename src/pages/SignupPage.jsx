@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { colors, formatCnic, formatPhone, validators, ShieldIcon, IdCardIcon, UserIcon, PhoneIcon, CheckCircleIcon, MessageIcon, ArrowLeft, ShieldCheckIcon, LockIcon, MailIcon } from '../theme';
+import { colors, formatCnic, formatPhone, validators, ShieldIcon, IdCardIcon, UserIcon, PhoneIcon, CheckCircleIcon, MessageIcon, ArrowLeft, ShieldCheckIcon, LockIcon, MailIcon, EyeIcon, EyeOffIcon } from '../theme';
 
 const SignupPage = () => {
   const navigate = useNavigate();
@@ -10,10 +10,20 @@ const SignupPage = () => {
   const [phone, setPhone] = useState('+92 ');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [backendError, setBackendError] = useState('');
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otp, setOtp] = useState('');
+
+  // Explicitly clear state on mount to prevent browser back-navigation caching
+  useEffect(() => {
+    setName('');
+    setCnic('');
+    setPhone('+92 ');
+    setEmail('');
+    setPassword('');
+  }, []);
 
   const handleCnicChange = (e) => {
     const raw = e.target.value;
@@ -79,7 +89,7 @@ const SignupPage = () => {
         </div>
       </div>
 
-      <div className="auth-content">
+      <form className="auth-content" autoComplete="off" onSubmit={(e) => { e.preventDefault(); handleRegister(); }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div className="auth-icon-circle" style={{ borderColor: 'rgba(212,175,55,0.3)', background: 'linear-gradient(135deg, rgba(212,175,55,0.15), rgba(1,118,58,0.15))' }}>
             <IdCardIcon size={26} color={colors.gold} />
@@ -91,7 +101,7 @@ const SignupPage = () => {
         {/* Tab selector */}
         <div style={{ display: 'flex', background: 'rgba(9,21,9,0.7)', borderRadius: 12, padding: 4, marginBottom: 24, border: `1.5px solid ${colors.divider}` }}>
           {['Resident (CNIC)', 'Overseas (NICOP)'].map((label, i) => (
-            <button key={i} onClick={() => setTab(i)} style={{
+            <button type="button" key={i} onClick={() => setTab(i)} style={{
               flex: 1, padding: '10px 0', border: 'none', borderRadius: 10,
               background: tab === i ? `linear-gradient(135deg, ${colors.green}, ${colors.greenDark})` : 'transparent',
               color: tab === i ? '#fff' : colors.textSub, fontWeight: tab === i ? 700 : 500,
@@ -125,14 +135,17 @@ const SignupPage = () => {
         <label className="sach-label" style={{ marginTop: errors.phone ? 12 : 0 }}>Email</label>
         <div className="sach-input-icon" style={{ marginBottom: errors.email ? 4 : 16 }}>
           <span className="icon-left"><MailIcon size={16} color={colors.gold} /></span>
-          <input className="sach-input" type="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input className="sach-input" type="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="off" />
         </div>
         {errors.email && <p className="field-error">{errors.email}</p>}
 
         <label className="sach-label" style={{ marginTop: errors.email ? 12 : 0 }}>Password</label>
-        <div className="sach-input-icon" style={{ marginBottom: errors.password ? 4 : 16 }}>
+        <div className="sach-input-icon" style={{ marginBottom: errors.password ? 4 : 16, position: 'relative' }}>
           <span className="icon-left"><LockIcon size={16} color={colors.gold} /></span>
-          <input className="sach-input" type="password" placeholder="Minimum 8 characters" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input className="sach-input" type={showPassword ? "text" : "password"} placeholder="Minimum 8 characters" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" style={{ paddingRight: 40 }} />
+          <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: colors.textSub, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+            {showPassword ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
+          </button>
         </div>
         {errors.password && <p className="field-error">{errors.password}</p>}
 
@@ -158,17 +171,17 @@ const SignupPage = () => {
           </div>
         </div>
 
-        <button className="sach-btn sach-btn-gradient" onClick={handleRegister}>
+        <button type="submit" className="sach-btn sach-btn-gradient">
           <ShieldCheckIcon size={16} /> Verify &amp; Register
         </button>
 
         <p style={{ textAlign: 'center', marginTop: 28, fontSize: 13, color: colors.textSub }}>
           Already registered?{' '}
-          <button onClick={() => navigate('/login')} style={{ background: 'none', border: 'none', color: colors.gold, fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+          <button type="button" onClick={() => navigate('/login')} style={{ background: 'none', border: 'none', color: colors.gold, fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
             Sign in here
           </button>
         </p>
-      </div>
+      </form>
 
 
 
