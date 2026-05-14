@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { colors, formatCnic, formatPhone, validators, ShieldIcon, IdCardIcon, UserIcon, PhoneIcon, CheckCircleIcon, MessageIcon, ArrowLeft, ShieldCheckIcon } from '../theme';
+import { colors, formatCnic, formatPhone, validators, ShieldIcon, IdCardIcon, UserIcon, PhoneIcon, CheckCircleIcon, MessageIcon, ArrowLeft, ShieldCheckIcon, LockIcon, MailIcon } from '../theme';
 
 const SignupPage = () => {
   const navigate = useNavigate();
@@ -8,7 +8,10 @@ const SignupPage = () => {
   const [name, setName] = useState('');
   const [cnic, setCnic] = useState('');
   const [phone, setPhone] = useState('+92 ');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
+  const [backendError, setBackendError] = useState('');
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otp, setOtp] = useState('');
 
@@ -22,12 +25,47 @@ const SignupPage = () => {
     if (!validators.minLength(name, 3)) errs.name = 'Full name must be at least 3 characters';
     if (!validators.cnic(cnic)) errs.cnic = tab === 0 ? 'Enter valid CNIC (e.g., 42101-1234567-8)' : 'Enter valid NICOP number';
     { const phoneDigits = phone.replace(/[^\d]/g, '').slice(2); if (!validators.phone(phoneDigits)) errs.phone = 'Enter valid 10-digit mobile number (e.g., 3001234567)'; }
+    if (!email) errs.email = 'Email address is required';
+    else if (!validators.email(email)) errs.email = 'Enter a valid email address';
+    if (!password || password.length < 8) errs.password = 'Password must be at least 8 characters';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
   const handleRegister = () => { if (validate()) setShowOtpModal(true); };
-  const handleOtpVerify = () => { if (otp.length === 6) { setShowOtpModal(false); navigate('/dashboard'); } };
+  const handleOtpVerify = async () => { 
+    if (otp.length === 6) { 
+      setBackendError('');
+      try {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const apiUrl = baseUrl.replace(/\/+$/, '');
+        const response = await fetch(`${apiUrl}/api/v1/user/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cnic: cnic,
+            full_name: name,
+            phone: phone.replace(/[^\d+]/g, ''),
+            email: email,
+            password: password
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          setBackendError(data.detail || 'Registration failed');
+          setShowOtpModal(false);
+          return;
+        }
+
+        setShowOtpModal(false); 
+        navigate('/dashboard'); 
+      } catch (err) {
+        setBackendError('Network error. Please try again.');
+        setShowOtpModal(false);
+      }
+    } 
+  };
 
   return (
     <div className="auth-page">
@@ -83,6 +121,32 @@ const SignupPage = () => {
           <input className="sach-input" placeholder="+92 3001234567" value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))} maxLength={14} />
         </div>
         {errors.phone && <p className="field-error">{errors.phone}</p>}
+
+        <label className="sach-label" style={{ marginTop: errors.phone ? 12 : 0 }}>Email</label>
+        <div className="sach-input-icon" style={{ marginBottom: errors.email ? 4 : 16 }}>
+          <span className="icon-left"><MailIcon size={16} color={colors.gold} /></span>
+          <input className="sach-input" type="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </div>
+        {errors.email && <p className="field-error">{errors.email}</p>}
+
+        <label className="sach-label" style={{ marginTop: errors.email ? 12 : 0 }}>Password</label>
+        <div className="sach-input-icon" style={{ marginBottom: errors.password ? 4 : 16 }}>
+          <span className="icon-left"><LockIcon size={16} color={colors.gold} /></span>
+          <input className="sach-input" type="password" placeholder="Minimum 8 characters" value={password} onChange={(e) => setPassword(e.target.value)} />
+        </div>
+        {errors.password && <p className="field-error">{errors.password}</p>}
+
+        {backendError && (
+          <div className="notice-box" style={{ background: 'rgba(220, 38, 38, 0.1)', borderColor: 'rgba(220, 38, 38, 0.3)', marginBottom: 24, marginTop: 8 }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <span style={{ color: colors.red, marginTop: 2 }}>⚠️</span>
+              <div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: colors.red }}>Registration Error</span>
+                <p style={{ fontSize: 11, color: '#fca5a5', lineHeight: 1.5, marginTop: 4 }}>{backendError}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="notice-box green" style={{ marginTop: 8, marginBottom: 24 }}>
           <CheckCircleIcon size={14} color={colors.green} />
