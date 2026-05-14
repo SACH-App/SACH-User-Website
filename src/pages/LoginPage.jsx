@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { colors, formatCnic, validators, ShieldIcon, LockIcon, IdCardIcon, KeyIcon, EyeIcon, EyeOffIcon, UnlockIcon, MessageIcon, ArrowLeft } from '../theme';
 import { useLanguage } from '../LanguageContext';
@@ -10,8 +10,14 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [errors, setErrors] = useState({});
+  const [backendError, setBackendError] = useState('');
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otp, setOtp] = useState('');
+
+  useEffect(() => {
+    setCnic('');
+    setPassword('');
+  }, []);
 
   const handleCnicChange = (e) => {
     const raw = e.target.value;
@@ -26,7 +32,40 @@ const LoginPage = () => {
     return Object.keys(errs).length === 0;
   };
 
-  const handleLogin = () => { if (validate()) navigate('/dashboard'); };
+  const handleLogin = async (e) => {
+    if (e) e.preventDefault();
+    if (!validate()) return;
+    
+    setBackendError('');
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const apiUrl = baseUrl.replace(/\/+$/, '');
+      
+      const formData = new URLSearchParams();
+      formData.append('username', cnic);
+      formData.append('password', password);
+
+      const response = await fetch(`${apiUrl}/api/v1/user/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString()
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setBackendError(data.detail || 'Login failed. Please check your credentials.');
+        return;
+      }
+
+      localStorage.setItem('sach_access_token', data.access_token);
+      localStorage.setItem('sach_refresh_token', data.refresh_token);
+      
+      navigate('/dashboard');
+    } catch (err) {
+      setBackendError('Network error. Please try again.');
+    }
+  };
+
   const handleOtpVerify = () => { if (otp.length === 6) { setShowOtpModal(false); navigate('/dashboard'); } };
 
   return (
@@ -41,7 +80,7 @@ const LoginPage = () => {
         </div>
       </div>
 
-      <div className="auth-content">
+      <form className="auth-content" autoComplete="off" onSubmit={handleLogin}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div className="auth-icon-circle"><LockIcon size={26} color={colors.green} /></div>
           <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 6 }}>Secure Login</h2>
@@ -51,43 +90,55 @@ const LoginPage = () => {
         <label className="sach-label">CNIC Number</label>
         <div className="sach-input-icon" style={{ marginBottom: errors.cnic ? 4 : 16 }}>
           <span className="icon-left"><IdCardIcon size={16} color={colors.gold} /></span>
-          <input className="sach-input" placeholder="42101-1234567-8" value={cnic} onChange={handleCnicChange} maxLength={15} />
+          <input className="sach-input" placeholder="42101-1234567-8" value={cnic} onChange={handleCnicChange} maxLength={15} autoComplete="off" readOnly onFocus={(e) => e.target.removeAttribute('readonly')} />
         </div>
         {errors.cnic && <p className="field-error">{errors.cnic}</p>}
 
         <label className="sach-label" style={{ marginTop: errors.cnic ? 12 : 0 }}>Password</label>
         <div className="sach-input-icon has-right" style={{ marginBottom: errors.password ? 4 : 16 }}>
           <span className="icon-left"><LockIcon size={16} color={colors.gold} /></span>
-          <input className="sach-input" type={showPass ? 'text' : 'password'} placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input className="sach-input" type={showPass ? 'text' : 'password'} placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" readOnly onFocus={(e) => e.target.removeAttribute('readonly')} />
           <button className="icon-right" onClick={() => setShowPass(!showPass)} type="button">
             {showPass ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
           </button>
         </div>
         {errors.password && <p className="field-error">{errors.password}</p>}
 
+        {backendError && (
+          <div className="notice-box" style={{ background: 'rgba(220, 38, 38, 0.1)', borderColor: 'rgba(220, 38, 38, 0.3)', marginBottom: 24, marginTop: 8 }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <span style={{ color: colors.red, marginTop: 2 }}>⚠️</span>
+              <div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: colors.red }}>Login Error</span>
+                <p style={{ fontSize: 11, color: '#fca5a5', lineHeight: 1.5, marginTop: 4 }}>{backendError}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div style={{ textAlign: 'right', marginBottom: 24 }}>
-          <button className="sach-btn-text" style={{ fontSize: 12, color: colors.gold }}>Forgot Password?</button>
+          <button type="button" className="sach-btn-text" style={{ fontSize: 12, color: colors.gold }}>Forgot Password?</button>
         </div>
 
-        <button className="sach-btn sach-btn-gradient" onClick={handleLogin}>
+        <button type="submit" className="sach-btn sach-btn-gradient">
           <UnlockIcon size={16} /> Secure Sign In
         </button>
 
         <div className="sach-divider" style={{ margin: '24px 0' }}><span>or sign in with</span></div>
 
         <div style={{ display: 'flex', gap: 12 }}>
-          <button className="sach-btn sach-btn-outline" onClick={() => setShowOtpModal(true)} style={{ flex: 1 }}>
+          <button type="button" className="sach-btn sach-btn-outline" onClick={() => setShowOtpModal(true)} style={{ flex: 1 }}>
             <MessageIcon size={16} /> SMS OTP
           </button>
         </div>
 
         <p style={{ textAlign: 'center', marginTop: 28, fontSize: 13, color: colors.textSub }}>
           Don't have an account?{' '}
-          <button onClick={() => navigate('/signup')} style={{ background: 'none', border: 'none', color: colors.gold, fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+          <button type="button" onClick={() => navigate('/signup')} style={{ background: 'none', border: 'none', color: colors.gold, fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
             Register as Citizen
           </button>
         </p>
-      </div>
+      </form>
 
       {showOtpModal && (
         <div className="modal-overlay" onClick={() => setShowOtpModal(false)}>
