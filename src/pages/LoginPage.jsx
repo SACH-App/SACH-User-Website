@@ -13,6 +13,7 @@ const LoginPage = () => {
   const [backendError, setBackendError] = useState('');
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otp, setOtp] = useState('');
+  const [isOtpLoading, setIsOtpLoading] = useState(false);
 
   useEffect(() => {
     setCnic('');
@@ -24,10 +25,10 @@ const LoginPage = () => {
     if (validators.cnicPartial(raw)) setCnic(formatCnic(raw));
   };
 
-  const validate = () => {
+  const validate = (onlyCnic = false) => {
     const errs = {};
     if (!validators.cnic(cnic)) errs.cnic = 'Enter valid CNIC (e.g., 42101-1234567-8)';
-    if (!validators.password(password)) errs.password = 'Password must be at least 6 characters';
+    if (!onlyCnic && !validators.password(password)) errs.password = 'Password must be at least 6 characters';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -66,7 +67,55 @@ const LoginPage = () => {
     }
   };
 
-  const handleOtpVerify = () => { if (otp.length === 6) { setShowOtpModal(false); navigate('/dashboard'); } };
+  const handleOtpRequest = async () => {
+    if (!validate(true)) return;
+    setBackendError('');
+    setIsOtpLoading(true);
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const apiUrl = baseUrl.replace(/\/+$/, '');
+      const response = await fetch(`${apiUrl}/api/v1/user/login/otp/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cnic })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setBackendError(data.detail || 'Failed to request OTP');
+        return;
+      }
+      setShowOtpModal(true);
+    } catch (err) {
+      setBackendError('Network error. Please try again.');
+    } finally {
+      setIsOtpLoading(false);
+    }
+  };
+
+  const handleOtpVerify = async () => {
+    if (otp.length === 6) {
+      try {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const apiUrl = baseUrl.replace(/\/+$/, '');
+        const response = await fetch(`${apiUrl}/api/v1/user/login/otp/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cnic, otp })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          alert(data.detail || 'Invalid OTP');
+          return;
+        }
+        localStorage.setItem('sach_access_token', data.access_token);
+        localStorage.setItem('sach_refresh_token', data.refresh_token);
+        setShowOtpModal(false);
+        navigate('/dashboard');
+      } catch (err) {
+        alert('Network error during OTP verification.');
+      }
+    }
+  };
 
   return (
     <div className="auth-page">
@@ -127,8 +176,8 @@ const LoginPage = () => {
         <div className="sach-divider" style={{ margin: '24px 0' }}><span>or sign in with</span></div>
 
         <div style={{ display: 'flex', gap: 12 }}>
-          <button type="button" className="sach-btn sach-btn-outline" onClick={() => setShowOtpModal(true)} style={{ flex: 1 }}>
-            <MessageIcon size={16} /> SMS OTP
+          <button type="button" className="sach-btn sach-btn-outline" onClick={handleOtpRequest} disabled={isOtpLoading} style={{ flex: 1 }}>
+            <MessageIcon size={16} /> {isOtpLoading ? 'Sending...' : 'Email OTP'}
           </button>
         </div>
 
@@ -145,8 +194,8 @@ const LoginPage = () => {
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div style={{ textAlign: 'center' }}>
               <div className="modal-icon-circle"><MessageIcon size={28} color={colors.gold} /></div>
-              <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>SMS Verification</h3>
-              <p style={{ fontSize: 13, color: colors.textSub, marginBottom: 24 }}>Enter the 6-digit OTP sent to your registered number</p>
+              <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Email Verification</h3>
+              <p style={{ fontSize: 13, color: colors.textSub, marginBottom: 24 }}>Enter the 6-digit OTP sent to your registered email address</p>
             </div>
             <input className="sach-input" placeholder="000000" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g,'').slice(0,6))} maxLength={6}
               style={{ textAlign: 'center', fontSize: 24, letterSpacing: 12, fontWeight: 700 }} />
