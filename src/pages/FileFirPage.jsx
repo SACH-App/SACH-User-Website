@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { colors, categories, cities, cityDistricts, generateBlockchainHash, validators, MapPinIcon, MapIcon, CalendarIcon, FileIcon, UploadIcon, CheckCircleIcon, InfoIcon, ShieldCheckIcon, ChevronRight, LinkIcon } from '../theme';
 import { useLanguage } from '../LanguageContext';
 import { useFirs } from '../stores/FirStore';
+import { fetchWithAuth } from '../utils/api';
 
 const steps = ['Location', 'Details', 'Evidence'];
 
@@ -22,7 +23,8 @@ const FileFirPage = () => {
   const [incidentTime, setIncidentTime] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
-  const [hasEvidence, setHasEvidence] = useState(false);
+  const [evidenceFile, setEvidenceFile] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const availableDistricts = city ? (cityDistricts[city] || []) : [];
 
   const validateStep = () => {
@@ -42,14 +44,67 @@ const FileFirPage = () => {
 
   const handleNext = () => { if (validateStep()) setStep(s => s + 1); };
 
-  const handleSubmit = () => {
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    const id = `FIR-${now.getFullYear()}-${String(firs.length + 130).padStart(5, '0')}`;
-    const newFir = { id, title: category, date: dateStr, status: 'Pending', address, city, district, description, incidentDate: incidentDate + (incidentTime ? `, ${incidentTime}` : ''), category, blockchainHash: generateBlockchainHash() };
-    addFir(newFir);
-    setSubmittedFir(newFir);
-    setShowSuccess(true);
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      // 1. Prepare Date
+      const isoDate = new Date(`${incidentDate}T${incidentTime || '00:00'}:00Z`).toISOString();
+      
+      // 2. Prepare payload
+      const categoryMap = {
+        'Theft': 'theft',
+        'Robbery': 'robbery',
+        'Assault / Violence': 'assault',
+        'Fraud / Scam': 'fraud',
+        'Cybercrime': 'cybercrime',
+        'Harassment': 'harassment',
+        'Murder': 'murder',
+        'Kidnapping': 'kidnapping',
+        'Domestic Violence': 'domestic_violence',
+        'Other': 'other'
+      };
+      const backendCategory = categoryMap[category] || 'other';
+
+      const payload = {
+        title: category,
+        description,
+        incident_date: isoDate,
+        incident_location: `${address}, ${district}, ${city}`,
+        category: backendCategory,
+        priority: 'medium'
+      };
+
+      // 3. Submit FIR
+      const res = await fetchWithAuth('/api/v1/user/fir', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || 'Failed to submit FIR');
+      }
+
+      const createdFir = await res.json();
+
+      // 4. Upload Evidence if present
+      if (evidenceFile) {
+        const formData = new FormData();
+        formData.append('file', evidenceFile);
+        
+        await fetchWithAuth(`/api/v1/user/fir/${createdFir.id}/evidence`, {
+          method: 'POST',
+          body: formData
+        });
+      }
+
+      setSubmittedFir(createdFir);
+      setShowSuccess(true);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const stepIcons = [<MapPinIcon size={12} color="#fff" />, <FileIcon size={12} color="#fff" />, <UploadIcon size={12} color="#fff" />];
@@ -131,17 +186,20 @@ const FileFirPage = () => {
           <div>
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}><UploadIcon size={18} color={colors.gold} /> {t('stepEvidence')}</h3>
             <p style={{ fontSize: 12, color: colors.textSub, marginBottom: 20 }}>{t('uploadHint')}</p>
-            <div onClick={() => setHasEvidence(!hasEvidence)} className="upload-zone" style={{ borderColor: hasEvidence ? colors.green : colors.divider, background: hasEvidence ? 'rgba(1,118,58,0.06)' : 'transparent' }}>
-              {hasEvidence ? <CheckCircleIcon size={36} color={colors.green} /> : <UploadIcon size={36} color={colors.textSub} />}
-              <p style={{ fontSize: 14, fontWeight: 600, color: hasEvidence ? colors.green : colors.textSub, marginTop: 8 }}>{hasEvidence ? t('evidenceAdded') : t('tapToUpload')}</p>
-            </div>
-            <div className="notice-box gold" style={{ marginBottom: 24 }}>
+            <label className="upload-zone hoverable" style={{ borderColor: evidenceFile ? colors.green : colors.divider, background: evidenceFile ? 'rgba(1,118,58,0.06)' : 'transparent', display: 'block', cursor: 'pointer' }}>
+              <input type="file" style={{ display: 'none' }} onChange={(e) => setEvidenceFile(e.target.files[0])} accept="image/*,.pdf" />
+              {evidenceFile ? <CheckCircleIcon size={36} color={colors.green} /> : <UploadIcon size={36} color={colors.textSub} />}
+              <p style={{ fontSize: 14, fontWeight: 600, color: evidenceFile ? colors.green : colors.textSub, marginTop: 8 }}>{evidenceFile ? evidenceFile.name : t('tapToUpload')}</p>
+            </label>
+            <div className="notice-box gold" style={{ marginBottom: 24, marginTop: 16 }}>
               <InfoIcon size={14} color={colors.gold} />
               <p style={{ fontSize: 11, color: 'rgba(212,175,55,0.8)', lineHeight: 1.6 }}>{t('evidenceOptional')}</p>
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
-              <button className="sach-btn sach-btn-outline" onClick={() => setStep(1)}>Back</button>
-              <button className="sach-btn sach-btn-gradient" onClick={handleSubmit}><ShieldCheckIcon size={16} /> {t('submitFir')}</button>
+              <button className="sach-btn sach-btn-outline" onClick={() => setStep(1)} disabled={isSubmitting}>Back</button>
+              <button className="sach-btn sach-btn-gradient" onClick={handleSubmit} disabled={isSubmitting}>
+                <ShieldCheckIcon size={16} /> {isSubmitting ? 'Submitting...' : t('submitFir')}
+              </button>
             </div>
           </div>
         )}
@@ -155,11 +213,11 @@ const FileFirPage = () => {
             <p style={{ fontSize: 13, color: colors.textSub, marginBottom: 20 }}>{t('firConfirmMsg')}</p>
             <div style={{ background: 'rgba(1,118,58,0.08)', border: '1px solid rgba(1,118,58,0.25)', borderRadius: 10, padding: 12, marginBottom: 12 }}>
               <span style={{ fontSize: 11, color: colors.textSub }}>Case ID</span>
-              <p style={{ fontSize: 16, fontWeight: 800, color: colors.gold, marginTop: 2 }}>{submittedFir.id}</p>
+              <p style={{ fontSize: 16, fontWeight: 800, color: colors.gold, marginTop: 2 }}>{submittedFir.tracking_number}</p>
             </div>
             <div style={{ background: 'rgba(1,118,58,0.04)', border: '1px solid rgba(1,118,58,0.15)', borderRadius: 10, padding: 10, marginBottom: 20 }}>
               <span style={{ fontSize: 10, color: colors.green, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><LinkIcon size={10} color={colors.green} /> Blockchain Hash</span>
-              <p style={{ fontSize: 9, fontFamily: 'monospace', color: '#7FFFB8', marginTop: 4, wordBreak: 'break-all', lineHeight: 1.5 }}>{submittedFir.blockchainHash}</p>
+              <p style={{ fontSize: 9, fontFamily: 'monospace', color: '#7FFFB8', marginTop: 4, wordBreak: 'break-all', lineHeight: 1.5 }}>{submittedFir.blockchain_hash || 'Pending Confirmation'}</p>
             </div>
             <button className="sach-btn sach-btn-gradient" onClick={() => navigate('/dashboard')}>{t('viewDashboard')}</button>
           </div>

@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LanguageProvider } from './LanguageContext';
 import { FirProvider } from './stores/FirStore';
 import { AlertProvider } from './stores/AlertStore';
-import { UserProvider } from './stores/UserStore';
+import { UserProvider, useUser } from './stores/UserStore';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import SplashPage from './pages/SplashPage';
@@ -31,11 +31,24 @@ const pageTitles = {
 const DashboardLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { t } = useLanguage();
+  const { profile, loading } = useUser();
 
   // Determine title from current path
   const path = window.location.pathname;
   const titleKey = pageTitles[path] || 'goToDashboard';
   const title = t(titleKey);
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#05130A', color: '#fff' }}>
+        <h2>Loading...</h2>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <div className="app-layout">

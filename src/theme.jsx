@@ -71,8 +71,9 @@ export const cityDistricts = {
 };
 
 export const categories = [
-  'Theft / Robbery', 'Vehicle Accident', 'Property Dispute', 'Cybercrime',
-  'Fraud / Scam', 'Assault / Violence', 'Missing Person', 'Land Encroachment', 'Other'
+  'Theft', 'Robbery', 'Assault / Violence', 'Fraud / Scam',
+  'Cybercrime', 'Harassment', 'Murder', 'Kidnapping',
+  'Domestic Violence', 'Other'
 ];
 
 // ─── Validators ────────────────────────────────────────────────────────────────

@@ -4,8 +4,8 @@ import { useLanguage } from '../LanguageContext';
 import { useAlerts } from '../stores/AlertStore';
 
 const AlertsPage = () => {
-  const { isUrdu, t } = useLanguage();
-  const { alerts, unreadCount, markAllRead, clearAll, markRead } = useAlerts();
+  const { t } = useLanguage();
+  const { alerts, unreadCount, markAllRead, markRead, clearAll } = useAlerts();
   const [selectedAlert, setSelectedAlert] = useState(null);
 
   return (
@@ -19,9 +19,6 @@ const AlertsPage = () => {
           <button className="sach-btn sach-btn-outline" style={{ width: 'auto', padding: '8px 14px', fontSize: 12 }} onClick={markAllRead}>
             <CheckCircleIcon size={14} /> {t('markAllRead')}
           </button>
-          <button className="sach-btn sach-btn-outline" style={{ width: 'auto', padding: '8px 14px', fontSize: 12, color: colors.red, borderColor: 'rgba(220,38,38,0.3)' }} onClick={clearAll}>
-            <TrashIcon size={14} color={colors.red} /> {t('clearAll')}
-          </button>
         </div>
       </div>
 
@@ -34,19 +31,20 @@ const AlertsPage = () => {
       ) : (
         <div className="stagger-list">
           {alerts.map((alert, i) => (
-            <div key={alert.id} className={`alert-card hoverable ${alert.isUnread ? 'unread' : ''}`} style={{ animationDelay: `${i * 50}ms` }}
+            <div key={alert.id} className={`alert-card hoverable ${!alert.is_read ? 'unread' : ''}`} style={{ animationDelay: `${i * 50}ms` }}
               onClick={() => { markRead(alert.id); setSelectedAlert(alert); }}>
               <div className="alert-icon-circle" style={{
-                background: alert.isUnread ? 'rgba(1,118,58,0.08)' : 'transparent',
-                border: `1px solid ${alert.isUnread ? 'rgba(1,118,58,0.2)' : colors.divider}`,
+                background: !alert.is_read ? 'rgba(1,118,58,0.08)' : 'transparent',
+                border: `1px solid ${!alert.is_read ? 'rgba(1,118,58,0.2)' : colors.divider}`,
               }}>
-                <BellIcon size={18} color={alert.isUnread ? colors.gold : colors.textSub} />
+                <BellIcon size={18} color={!alert.is_read ? colors.gold : colors.textSub} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 13, fontWeight: alert.isUnread ? 700 : 500, marginBottom: 2 }}>{isUrdu ? alert.titleUr : alert.titleEn}</p>
-                <p style={{ fontSize: 11, color: colors.textSub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{isUrdu ? alert.subtitleUr : alert.subtitleEn}</p>
+                <p style={{ fontSize: 13, fontWeight: !alert.is_read ? 700 : 500, marginBottom: 2 }}>{alert.title}</p>
+                <p style={{ fontSize: 11, color: colors.textSub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alert.message}</p>
+                <p style={{ fontSize: 9, color: colors.textSub, marginTop: 4 }}>{new Date(alert.created_at).toLocaleString()}</p>
               </div>
-              {alert.isUnread && <div className="alert-unread-dot" />}
+              {!alert.is_read && <div className="alert-unread-dot" />}
             </div>
           ))}
         </div>
@@ -58,8 +56,9 @@ const AlertsPage = () => {
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
               <div className="modal-icon-circle"><BellIcon size={28} color={colors.gold} /></div>
             </div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, textAlign: 'center' }}>{isUrdu ? selectedAlert.titleUr : selectedAlert.titleEn}</h3>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.7, textAlign: 'center' }}>{isUrdu ? selectedAlert.subtitleUr : selectedAlert.subtitleEn}</p>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, textAlign: 'center' }}>{selectedAlert.title}</h3>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.7, textAlign: 'center' }}>{selectedAlert.message}</p>
+            <p style={{ fontSize: 11, color: colors.textSub, marginTop: 12, textAlign: 'center' }}>{new Date(selectedAlert.created_at).toLocaleString()}</p>
             <button className="sach-btn sach-btn-outline" style={{ marginTop: 20 }} onClick={() => setSelectedAlert(null)}>{t('close')}</button>
           </div>
         </div>

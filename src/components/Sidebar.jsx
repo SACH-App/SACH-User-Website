@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../LanguageContext';
+import { useUser } from '../stores/UserStore';
 import { useAlerts } from '../stores/AlertStore';
 import { colors, gradients, DashboardIcon, FileIcon, PlusIcon, BellIcon, UserIcon, LogoutIcon } from '../theme';
 
@@ -31,6 +32,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
+  const { logout } = useUser();
   const { unreadCount } = useAlerts();
 
   const handleNav = (path) => {
@@ -186,7 +188,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
           {/* Logout */}
           <button
-            onClick={() => { navigate('/'); onClose?.(); }}
+            onClick={() => { logout(); onClose?.(); }}
             style={{
               width: '100%',
               display: 'flex',
