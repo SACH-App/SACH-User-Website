@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { colors, formatCnic, validators, ShieldIcon, LockIcon, IdCardIcon, KeyIcon, EyeIcon, EyeOffIcon, UnlockIcon, MessageIcon, ArrowLeft } from '../theme';
 import { useLanguage } from '../LanguageContext';
+import { useUser } from '../stores/UserStore';
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { fetchProfile } = useUser();
   const [cnic, setCnic] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -14,6 +16,12 @@ const LoginPage = () => {
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otp, setOtp] = useState('');
   const [isOtpLoading, setIsOtpLoading] = useState(false);
+
+  // Forgot password states
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1); // 1 = enter CNIC to request, 2 = enter OTP and New Pass
+  const [newPassword, setNewPassword] = useState('');
+  const [isForgotLoading, setIsForgotLoading] = useState(false);
 
   useEffect(() => {
     setCnic('');
@@ -61,6 +69,7 @@ const LoginPage = () => {
       localStorage.setItem('sach_access_token', data.access_token);
       localStorage.setItem('sach_refresh_token', data.refresh_token);
       
+      await fetchProfile();
       navigate('/dashboard');
     } catch (err) {
       setBackendError('Network error. Please try again.');
@@ -110,10 +119,93 @@ const LoginPage = () => {
         localStorage.setItem('sach_access_token', data.access_token);
         localStorage.setItem('sach_refresh_token', data.refresh_token);
         setShowOtpModal(false);
+        await fetchProfile();
         navigate('/dashboard');
       } catch (err) {
         alert('Network error during OTP verification.');
       }
+    }
+  };
+
+  const handleForgotRequest = async () => {
+    if (!validate(true)) return;
+    setBackendError('');
+    setIsForgotLoading(true);
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const apiUrl = baseUrl.replace(/\/+$/, '');
+      const response = await fetch(`${apiUrl}/api/v1/user/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cnic })
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        alert(data.detail || 'Failed to request password reset');
+        return;
+      }
+      setForgotStep(2);
+      setOtp('');
+      setNewPassword('');
+    } catch (err) {
+      alert('Network error. Please try again.');
+    } finally {
+      setIsForgotLoading(false);
+    }
+  };
+
+  const handleForgotReset = async () => {
+    if (otp.length !== 6 || newPassword.length < 8) {
+      alert('Enter 6-digit OTP and new password (min 8 chars).');
+      return;
+    }
+    setIsForgotLoading(true);
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const apiUrl = baseUrl.replace(/\/+$/, '');
+      const response = await fetch(`${apiUrl}/api/v1/user/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cnic, otp, new_password: newPassword })
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        alert(data.detail || 'Failed to reset password');
+        return;
+      }
+
+      // Step 2: Automatically log in
+      const formData = new URLSearchParams();
+      formData.append('username', cnic);
+      formData.append('password', newPassword);
+
+      const loginResponse = await fetch(`${apiUrl}/api/v1/user/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString()
+      });
+
+      const loginData = await loginResponse.json();
+      if (!loginResponse.ok) {
+        alert('Password reset successfully! Please login with your new password.');
+        setShowForgotModal(false);
+        setForgotStep(1);
+        setPassword('');
+        setOtp('');
+        return;
+      }
+
+      // Save tokens and redirect to dashboard with native SPA navigation
+      localStorage.setItem('sach_access_token', loginData.access_token);
+      localStorage.setItem('sach_refresh_token', loginData.refresh_token);
+      
+      await fetchProfile();
+      navigate('/dashboard');
+
+    } catch (err) {
+      alert('Network error during password reset.');
+    } finally {
+      setIsForgotLoading(false);
     }
   };
 
@@ -166,7 +258,7 @@ const LoginPage = () => {
         )}
 
         <div style={{ textAlign: 'right', marginBottom: 24 }}>
-          <button type="button" className="sach-btn-text" style={{ fontSize: 12, color: colors.gold }}>Forgot Password?</button>
+          <button type="button" className="sach-btn-text" style={{ fontSize: 12, color: colors.gold }} onClick={() => setShowForgotModal(true)}>Forgot Password?</button>
         </div>
 
         <button type="submit" className="sach-btn sach-btn-gradient">
@@ -200,10 +292,53 @@ const LoginPage = () => {
             <input className="sach-input" placeholder="000000" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g,'').slice(0,6))} maxLength={6}
               style={{ textAlign: 'center', fontSize: 24, letterSpacing: 12, fontWeight: 700 }} />
             <button className="sach-btn sach-btn-gradient" style={{ marginTop: 20 }} onClick={handleOtpVerify} disabled={otp.length !== 6}>Verify OTP</button>
+            <button className="sach-btn-text" style={{ marginTop: 12, width: '100%', color: colors.textSub }} onClick={() => setShowOtpModal(false)}>Cancel</button>
           </div>
         </div>
       )}
 
+      {showForgotModal && (
+        <div className="modal-overlay" onClick={() => { setShowForgotModal(false); setForgotStep(1); }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div style={{ textAlign: 'center' }}>
+              <div className="modal-icon-circle"><KeyIcon size={28} color={colors.gold} /></div>
+              <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Reset Password</h3>
+              <p style={{ fontSize: 13, color: colors.textSub, marginBottom: 24 }}>
+                {forgotStep === 1 ? 'Enter your CNIC to receive a reset OTP.' : 'Enter the 6-digit OTP and your new password.'}
+              </p>
+            </div>
+            
+            {forgotStep === 1 ? (
+              <>
+                <label className="sach-label">CNIC Number</label>
+                <div className="sach-input-icon" style={{ marginBottom: 16 }}>
+                  <span className="icon-left"><IdCardIcon size={16} color={colors.gold} /></span>
+                  <input className="sach-input" placeholder="42101-1234567-8" value={cnic} onChange={handleCnicChange} maxLength={15} />
+                </div>
+                <button className="sach-btn sach-btn-gradient" style={{ marginTop: 12 }} onClick={handleForgotRequest} disabled={isForgotLoading}>
+                  {isForgotLoading ? 'Sending...' : 'Send Reset OTP'}
+                </button>
+              </>
+            ) : (
+              <>
+                <label className="sach-label">OTP Code</label>
+                <input className="sach-input" placeholder="000000" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g,'').slice(0,6))} maxLength={6} autoComplete="one-time-code" style={{ textAlign: 'center', fontSize: 20, letterSpacing: 8, fontWeight: 700, marginBottom: 16 }} />
+                
+                <label className="sach-label">New Password</label>
+                <div className="sach-input-icon" style={{ marginBottom: 16 }}>
+                  <span className="icon-left"><LockIcon size={16} color={colors.gold} /></span>
+                  <input className="sach-input" type="password" placeholder="Min 8 characters" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" />
+                </div>
+
+                <button className="sach-btn sach-btn-gradient" style={{ marginTop: 12 }} onClick={handleForgotReset} disabled={isForgotLoading || otp.length !== 6 || newPassword.length < 8}>
+                  {isForgotLoading ? 'Resetting...' : 'Reset Password'}
+                </button>
+              </>
+            )}
+            <button className="sach-btn-text" style={{ marginTop: 12, width: '100%', color: colors.textSub }} onClick={() => { setShowForgotModal(false); setForgotStep(1); }}>Cancel</button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

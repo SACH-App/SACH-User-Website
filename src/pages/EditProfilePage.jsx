@@ -7,32 +7,85 @@ import { useUser } from '../stores/UserStore';
 const EditProfilePage = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const { profile, updateProfile } = useUser();
-  const [form, setForm] = useState({ ...profile });
+  const { profile, saveEdits, loading } = useUser();
+  const [form, setForm] = useState({
+    phone: profile?.phone || '',
+    email: profile?.email || '',
+    address: profile?.address || ''
+  });
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
   const [errors, setErrors] = useState({});
-  const [showToast, setShowToast] = useState(false);
+  const [showToast, setShowToast] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
   const onChange = (k, v) => setForm({ ...form, [k]: v });
+  const onPassChange = (k, v) => setPasswordForm({ ...passwordForm, [k]: v });
 
   const validate = () => {
     const errs = {};
     if (form.email && !validators.email(form.email)) errs.email = 'Enter a valid email';
-    if (form.altPhone && form.altPhone !== '+92 ') { const phoneDigits = form.altPhone.replace(/[^\d]/g, '').slice(2); if (!validators.phone(phoneDigits)) errs.altPhone = 'Enter a valid 10-digit mobile number'; }
+    if (form.phone && form.phone !== '+92 ') {
+      const phoneDigits = form.phone.replace(/[^\d]/g, '').slice(2);
+      if (!validators.phone(phoneDigits)) errs.phone = 'Enter a valid 10-digit mobile number';
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (validate()) {
-      updateProfile(form);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
+      setIsSaving(true);
+      const res = await saveEdits({
+        phone: form.phone === '+92 ' ? null : form.phone,
+        email: form.email
+      });
+      setIsSaving(false);
+      if (res.success) {
+        setShowToast('Profile updated successfully');
+        setTimeout(() => setShowToast(''), 3000);
+      } else {
+        alert(res.error);
+      }
     }
   };
 
+  const handleChangePassword = async () => {
+    if (passwordForm.newPassword.length < 8) {
+      alert('New password must be at least 8 characters');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const { fetchWithAuth } = await import('../utils/api');
+      const res = await fetchWithAuth('/api/v1/user/change-password', {
+        method: 'PUT',
+        body: JSON.stringify({
+          current_password: passwordForm.currentPassword,
+          new_password: passwordForm.newPassword
+        })
+      });
+      if (res.ok) {
+        setShowToast('Password changed successfully');
+        setPasswordForm({ currentPassword: '', newPassword: '' });
+        setTimeout(() => setShowToast(''), 3000);
+      } else {
+        const data = await res.json();
+        alert(data.detail || 'Failed to change password');
+      }
+    } catch (err) {
+      alert('Network error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (loading || !profile) return <div style={{ padding: 20 }}>Loading...</div>;
+
   // Locked fields (identity verified — not editable)
   const lockedFields = [
-    { icon: <UserIcon size={16} color={colors.gold} />, label: 'Full Name', value: form.fullName },
-    { icon: <IdCardIcon size={16} color={colors.gold} />, label: 'CNIC Number', value: form.cnic },
+    { icon: <UserIcon size={16} color={colors.gold} />, label: 'Full Name', value: profile.full_name || profile.fullName },
+    { icon: <IdCardIcon size={16} color={colors.gold} />, label: 'CNIC Number', value: profile.cnic },
+    { icon: <MapPinIcon size={16} color={colors.gold} />, label: 'Verified Address (NADRA)', value: profile.address || 'No address on file' },
   ];
 
   return (
@@ -47,7 +100,7 @@ const EditProfilePage = () => {
         <div>
           <span style={{ fontSize: 12, fontWeight: 700, color: colors.green }}>Verified Fields</span>
           <p style={{ fontSize: 11, color: colors.textSub, lineHeight: 1.5, marginTop: 4 }}>
-            Name and CNIC are locked as they are verified. These fields cannot be modified.
+            Name, CNIC, and Address are locked as they are verified from NADRA. These fields cannot be modified.
           </p>
         </div>
       </div>
@@ -66,36 +119,48 @@ const EditProfilePage = () => {
       <div className="sach-card hoverable" style={{ marginBottom: 24 }}>
         <h4 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20 }}><InfoIcon size={14} color={colors.gold} /> Editable Information</h4>
 
-        <label className="sach-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><PhoneIcon size={14} color={colors.gold} /> Alternate Phone</label>
-        <div className="sach-input-icon" style={{ marginBottom: errors.altPhone ? 4 : 16 }}>
+        <label className="sach-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><PhoneIcon size={14} color={colors.gold} /> Phone Number</label>
+        <div className="sach-input-icon" style={{ marginBottom: errors.phone ? 4 : 16 }}>
           <span className="icon-left"><PhoneIcon size={16} color={colors.gold} /></span>
-          <input className="sach-input" placeholder="+92 3001234567" value={form.altPhone || '+92 '} onChange={(e) => onChange('altPhone', formatPhone(e.target.value))} maxLength={14} onFocus={(e) => { if (!e.target.value || e.target.value.trim() === '') onChange('altPhone', '+92 '); }} />
+          <input className="sach-input" placeholder="+92 3001234567" value={form.phone || ''} onChange={(e) => onChange('phone', formatPhone(e.target.value))} maxLength={14} onFocus={(e) => { if (!e.target.value || e.target.value.trim() === '') onChange('phone', '+92 '); }} />
         </div>
-        {errors.altPhone && <p className="field-error">{errors.altPhone}</p>}
+        {errors.phone && <p className="field-error">{errors.phone}</p>}
 
         <label className="sach-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MailIcon size={14} color={colors.gold} /> Email Address</label>
-        <div className="sach-input-icon" style={{ marginBottom: errors.email ? 4 : 16 }}>
+        <div className="sach-input-icon" style={{ marginBottom: errors.email ? 4 : 24 }}>
           <span className="icon-left"><MailIcon size={16} color={colors.gold} /></span>
           <input className="sach-input" placeholder="you@email.com" value={form.email} onChange={(e) => onChange('email', e.target.value)} />
         </div>
-        {errors.email && <p className="field-error">{errors.email}</p>}
+        {errors.email && <p className="field-error" style={{ marginBottom: 24 }}>{errors.email}</p>}
 
-        <label className="sach-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MapPinIcon size={14} color={colors.gold} /> Residential Address</label>
-        <input className="sach-input" placeholder="Enter your residential address" value={form.address} onChange={(e) => onChange('address', e.target.value)} style={{ marginBottom: 16 }} />
+        <button className="sach-btn sach-btn-gradient" onClick={handleSave} disabled={isSaving}>
+          <SaveIcon size={16} /> {isSaving ? 'Saving...' : 'Save Profile Changes'}
+        </button>
+      </div>
 
-        <label className="sach-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><HomeIcon size={14} color={colors.gold} /> City</label>
-        <select className="sach-select" value={form.city} onChange={(e) => onChange('city', e.target.value)} style={{ marginBottom: 16 }}>
-          <option value="">Select City</option>{cities.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
+      {/* Change Password */}
+      <div className="sach-card hoverable" style={{ marginBottom: 24 }}>
+        <h4 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20 }}><LockIcon size={14} color={colors.gold} /> Change Password</h4>
 
-        <label className="sach-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><HomeIcon size={14} color={colors.gold} /> District</label>
-        <input className="sach-input" placeholder="Enter district" value={form.district} onChange={(e) => onChange('district', e.target.value)} style={{ marginBottom: 24 }} />
+        <label className="sach-label">Current Password</label>
+        <div className="sach-input-icon" style={{ marginBottom: 16 }}>
+          <span className="icon-left"><LockIcon size={16} color={colors.gold} /></span>
+          <input type="password" className="sach-input" placeholder="Enter current password" value={passwordForm.currentPassword} onChange={(e) => onPassChange('currentPassword', e.target.value)} />
+        </div>
 
-        <button className="sach-btn sach-btn-gradient" onClick={handleSave}><SaveIcon size={16} /> Save Changes</button>
+        <label className="sach-label">New Password</label>
+        <div className="sach-input-icon" style={{ marginBottom: 24 }}>
+          <span className="icon-left"><LockIcon size={16} color={colors.gold} /></span>
+          <input type="password" className="sach-input" placeholder="Enter new password (min 8 chars)" value={passwordForm.newPassword} onChange={(e) => onPassChange('newPassword', e.target.value)} />
+        </div>
+
+        <button className="sach-btn sach-btn-outline" onClick={handleChangePassword} disabled={isSaving || !passwordForm.currentPassword || !passwordForm.newPassword}>
+          <LockIcon size={16} /> Update Password
+        </button>
       </div>
 
       {showToast && (
-        <div className="toast"><CheckCircleIcon size={18} color={colors.green} /> Profile updated successfully</div>
+        <div className="toast"><CheckCircleIcon size={18} color={colors.green} /> {showToast}</div>
       )}
     </div>
   );

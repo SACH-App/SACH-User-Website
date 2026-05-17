@@ -1,79 +1,68 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { fetchWithAuth } from '../utils/api';
+import { useUser } from './UserStore';
 
 const AlertContext = createContext();
 
-const makeMockAlerts = () => [
-  {
-    id: 'a1',
-    icon: 'clipboard',
-    titleEn: 'FIR-2026-00128 Status Update',
-    titleUr: 'FIR-2026-00128 حیثیت کی تبدیلی',
-    subtitleEn: 'Your complaint is now being actively investigated by the assigned officer.',
-    subtitleUr: 'آپ کی شکایت پر متعلقہ افسر تفتیش کر رہے ہیں۔',
-    time: '2 hours ago',
-    isUnread: true,
-  },
-  {
-    id: 'a2',
-    icon: 'bell',
-    titleEn: 'Officer Assigned',
-    titleUr: 'آفیسر تعینات',
-    subtitleEn: 'Inspector Muhammad Asif has been assigned to case FIR-2026-00128.',
-    subtitleUr: 'انسپکٹر محمد آصف کو FIR-2026-00128 کیس تفویض کیا گیا۔',
-    time: '5 hours ago',
-    isUnread: true,
-  },
-  {
-    id: 'a3',
-    icon: 'check',
-    titleEn: 'FIR-2026-00099 Resolved',
-    titleUr: 'FIR-2026-00099 حل ہو گئی',
-    subtitleEn: 'Your vehicle accident complaint has been resolved successfully.',
-    subtitleUr: 'آپ کی گاڑی حادثے کی شکایت کامیابی سے حل ہو گئی ہے۔',
-    time: '1 day ago',
-    isUnread: false,
-  },
-  {
-    id: 'a4',
-    icon: 'alert',
-    titleEn: 'Security Alert',
-    titleUr: 'سیکورٹی الرٹ',
-    subtitleEn: 'A new login was detected on your account from Karachi, Sindh.',
-    subtitleUr: 'آپ کے اکاؤنٹ پر کراچی، سندھ سے نئی لاگ ان کا پتہ چلا۔',
-    time: '2 days ago',
-    isUnread: false,
-  },
-  {
-    id: 'a5',
-    icon: 'refresh',
-    titleEn: 'FIR-2026-00072 Under Review',
-    titleUr: 'FIR-2026-00072 جائزہ میں',
-    subtitleEn: 'Your property dispute case is now under review by the district magistrate.',
-    subtitleUr: 'آپ کا جائیداد تنازعہ کیس اب ضلعی مجسٹریٹ کے زیر جائزہ ہے۔',
-    time: '3 days ago',
-    isUnread: false,
-  },
-];
-
 export const AlertProvider = ({ children }) => {
-  const [alerts, setAlerts] = useState(makeMockAlerts);
+  const [alerts, setAlerts] = useState([]);
+  const { profile } = useUser(); // to only fetch if logged in
 
-  const unreadCount = alerts.filter(a => a.isUnread).length;
+  const fetchAlerts = useCallback(async () => {
+    if (!profile) return;
+    try {
+      const res = await fetchWithAuth('/api/v1/user/notifications?page=1&page_size=100');
+      if (res.ok) {
+        const data = await res.json();
+        setAlerts(data.items || []);
+      }
+    } catch (err) {
+      console.error('Failed to load notifications', err);
+    }
+  }, [profile]);
 
-  const markAllRead = useCallback(() => {
-    setAlerts(prev => prev.map(a => ({ ...a, isUnread: false })));
-  }, []);
+  useEffect(() => {
+    fetchAlerts();
+    // Poll every 10 seconds to simulate real-time notifications for Phase 3
+    const intId = setInterval(fetchAlerts, 10000);
+    return () => clearInterval(intId);
+  }, [fetchAlerts]);
 
-  const markRead = useCallback((id) => {
-    setAlerts(prev => prev.map(a => a.id === id ? { ...a, isUnread: false } : a));
-  }, []);
+  const unreadCount = alerts.filter(a => !a.is_read).length;
+
+  const markAllRead = useCallback(async () => {
+    setAlerts(prev => prev.map(a => ({ ...a, is_read: true })));
+    try {
+      const res = await fetchWithAuth('/api/v1/user/notifications/read-all', { method: 'PUT' });
+      if (!res.ok) fetchAlerts(); // Revert on failure
+    } catch (err) {
+      fetchAlerts(); // Revert on failure
+    }
+  }, [fetchAlerts]);
+
+  const markRead = useCallback(async (id) => {
+    const alert = alerts.find(a => a.id === id);
+    if (alert && alert.is_read) return;
+    
+    setAlerts(prev => prev.map(a => a.id === id ? { ...a, is_read: true } : a));
+    try {
+      const res = await fetchWithAuth(`/api/v1/user/notifications/${id}/read`, { method: 'PUT' });
+      if (!res.ok) {
+        // Revert on failure
+        setAlerts(prev => prev.map(a => a.id === id ? { ...a, is_read: false } : a));
+      }
+    } catch (err) {
+      setAlerts(prev => prev.map(a => a.id === id ? { ...a, is_read: false } : a));
+    }
+  }, [alerts]);
 
   const clearAll = useCallback(() => {
+    // Backend doesn't support delete right now, so we just clear locally for UI
     setAlerts([]);
   }, []);
 
   return (
-    <AlertContext.Provider value={{ alerts, unreadCount, markAllRead, markRead, clearAll }}>
+    <AlertContext.Provider value={{ alerts, unreadCount, markAllRead, markRead, clearAll, refreshAlerts: fetchAlerts }}>
       {children}
     </AlertContext.Provider>
   );

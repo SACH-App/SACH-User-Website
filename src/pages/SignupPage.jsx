@@ -13,8 +13,7 @@ const SignupPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [backendError, setBackendError] = useState('');
-  const [showOtpModal, setShowOtpModal] = useState(false);
-  const [otp, setOtp] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Explicitly clear state on mount to prevent browser back-navigation caching
   useEffect(() => {
@@ -42,39 +41,62 @@ const SignupPage = () => {
     return Object.keys(errs).length === 0;
   };
 
-  const handleRegister = () => { if (validate()) setShowOtpModal(true); };
-  const handleOtpVerify = async () => { 
-    if (otp.length === 6) { 
-      setBackendError('');
-      try {
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        const apiUrl = baseUrl.replace(/\/+$/, '');
-        const response = await fetch(`${apiUrl}/api/v1/user/signup`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            cnic: cnic,
-            full_name: name,
-            phone: phone.replace(/[^\d+]/g, ''),
-            email: email,
-            password: password
-          })
-        });
+  const handleRegister = async () => {
+    if (!validate()) return;
+    
+    setBackendError('');
+    setIsLoading(true);
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const apiUrl = baseUrl.replace(/\/+$/, '');
+      
+      // Step 1: Sign up
+      const signupResponse = await fetch(`${apiUrl}/api/v1/user/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cnic: cnic,
+          full_name: name,
+          phone: phone.replace(/[^\d+]/g, ''),
+          email: email,
+          password: password
+        })
+      });
 
-        const data = await response.json();
-        if (!response.ok) {
-          setBackendError(data.detail || 'Registration failed');
-          setShowOtpModal(false);
-          return;
-        }
-
-        setShowOtpModal(false); 
-        navigate('/dashboard'); 
-      } catch (err) {
-        setBackendError('Network error. Please try again.');
-        setShowOtpModal(false);
+      const signupData = await signupResponse.json();
+      if (!signupResponse.ok) {
+        setBackendError(signupData.detail || 'Registration failed');
+        return;
       }
-    } 
+
+      // Step 2: Automatically log in
+      const formData = new URLSearchParams();
+      formData.append('username', cnic);
+      formData.append('password', password);
+
+      const loginResponse = await fetch(`${apiUrl}/api/v1/user/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString()
+      });
+
+      const loginData = await loginResponse.json();
+      if (!loginResponse.ok) {
+        // If auto-login fails for some reason, redirect to login page
+        navigate('/login');
+        return;
+      }
+
+      // Save tokens and redirect to dashboard with a full reload to fetch profile
+      localStorage.setItem('sach_access_token', loginData.access_token);
+      localStorage.setItem('sach_refresh_token', loginData.refresh_token);
+      window.location.href = '/dashboard';
+
+    } catch (err) {
+      setBackendError('Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -164,15 +186,15 @@ const SignupPage = () => {
         <div className="notice-box green" style={{ marginTop: 8, marginBottom: 24 }}>
           <CheckCircleIcon size={14} color={colors.green} />
           <div>
-            <span style={{ fontSize: 12, fontWeight: 700, color: colors.green }}>Identity Verification</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: colors.green }}>Secure Registration</span>
             <p style={{ fontSize: 11, color: colors.textSub, lineHeight: 1.5, marginTop: 4 }}>
-              Your identity will be verified via SMS OTP sent to your registered mobile number.
+              Your details will be cross-referenced with the NADRA database to fetch your official permanent address.
             </p>
           </div>
         </div>
 
-        <button type="submit" className="sach-btn sach-btn-gradient">
-          <ShieldCheckIcon size={16} /> Verify &amp; Register
+        <button type="submit" className="sach-btn sach-btn-gradient" disabled={isLoading}>
+          <ShieldCheckIcon size={16} /> {isLoading ? 'Registering...' : 'Verify & Register'}
         </button>
 
         <p style={{ textAlign: 'center', marginTop: 28, fontSize: 13, color: colors.textSub }}>
@@ -183,22 +205,6 @@ const SignupPage = () => {
         </p>
       </form>
 
-
-
-      {showOtpModal && (
-        <div className="modal-overlay" onClick={() => setShowOtpModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div style={{ textAlign: 'center' }}>
-              <div className="modal-icon-circle"><MessageIcon size={28} color={colors.gold} /></div>
-              <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>SMS Verification</h3>
-              <p style={{ fontSize: 13, color: colors.textSub, marginBottom: 24 }}>Enter the 6-digit code sent to {phone}</p>
-            </div>
-            <input className="sach-input" placeholder="000000" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g,'').slice(0,6))} maxLength={6}
-              style={{ textAlign: 'center', fontSize: 24, letterSpacing: 12, fontWeight: 700 }} />
-            <button className="sach-btn sach-btn-gradient" style={{ marginTop: 20 }} onClick={handleOtpVerify} disabled={otp.length !== 6}>Verify &amp; Complete Registration</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

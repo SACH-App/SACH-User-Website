@@ -1,19 +1,43 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { colors, getStatusColor, getCategoryIcon, UserIcon, CheckCircleIcon, FileIcon, PlusIcon, FolderIcon, ClockIcon, ChevronRight, MapPinIcon, BellIcon } from '../theme';
 import { useLanguage } from '../LanguageContext';
 import { useUser } from '../stores/UserStore';
-import { useFirs } from '../stores/FirStore';
 import { useAlerts } from '../stores/AlertStore';
+import { fetchWithAuth } from '../utils/api';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
   const { t, isUrdu } = useLanguage();
   const { profile } = useUser();
-  const { firs, stats } = useFirs();
   const { alerts, unreadCount } = useAlerts();
+
+  const [firs, setFirs] = useState([]);
+  const [stats, setStats] = useState({ total: 0, pending: 0, resolved: 0 });
+
+  useEffect(() => {
+    const loadFirs = async () => {
+      try {
+        const res = await fetchWithAuth('/api/v1/user/firs?page=1&page_size=100');
+        if (res.ok) {
+          const data = await res.json();
+          const items = data.items || [];
+          setFirs(items);
+          setStats({
+            total: data.total,
+            pending: items.filter(f => f.status === 'pending' || f.status === 'under_investigation').length,
+            resolved: items.filter(f => f.status === 'resolved' || f.status === 'closed').length,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load FIRs for dashboard', err);
+      }
+    };
+    loadFirs();
+  }, []);
+
   const recentFirs = firs.slice(0, 5);
-  const recentAlerts = alerts.filter(a => a.isUnread).slice(0, 3);
+  const recentAlerts = alerts.filter(a => !a.is_read).slice(0, 3);
 
   return (
     <div className="page-enter">
@@ -21,7 +45,7 @@ const DashboardPage = () => {
       <div className="sach-card hoverable" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px 24px', marginBottom: 24, background: `linear-gradient(135deg, ${colors.bgCard}, rgba(1,118,58,0.06))` }}>
         <div className="profile-avatar"><UserIcon size={28} color="#fff" /></div>
         <div style={{ flex: 1 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 2 }}>{profile.fullName}</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 2 }}>{profile.full_name || profile.fullName}</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span className="verified-chip"><CheckCircleIcon size={12} color={colors.emerald} /> {t('verifiedCitizen')}</span>
             <span style={{ fontSize: 11, color: colors.textSub }}>{profile.cnic}</span>
@@ -87,13 +111,13 @@ const DashboardPage = () => {
                   <div className="fir-card-body">
                     <div className="fir-card-header">
                       <div>
-                        <div className="fir-card-id">{fir.id}</div>
-                        <div className="fir-card-date">{fir.date}</div>
+                        <div className="fir-card-id">{fir.tracking_number}</div>
+                        <div className="fir-card-date">{new Date(fir.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                       </div>
                       <span className="status-badge" style={{ background: `${statusColor}18`, color: statusColor, border: `1px solid ${statusColor}44` }}>{fir.status}</span>
                     </div>
                     <div className="fir-card-title">{fir.description}</div>
-                    {fir.address && <div className="fir-card-location"><MapPinIcon size={11} color={colors.textSub} /> {fir.address}, {fir.city}</div>}
+                    {fir.incident_location && <div className="fir-card-location"><MapPinIcon size={11} color={colors.textSub} /> {fir.incident_location}</div>}
                   </div>
                   <span className="fir-card-chevron"><ChevronRight size={18} color={colors.textSub} /></span>
                 </div>
@@ -124,8 +148,8 @@ const DashboardPage = () => {
                   <BellIcon size={18} color={colors.gold} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>{isUrdu ? alert.titleUr : alert.titleEn}</p>
-                  <p style={{ fontSize: 11, color: colors.textSub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{isUrdu ? alert.subtitleUr : alert.subtitleEn}</p>
+                  <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>{alert.title}</p>
+                  <p style={{ fontSize: 11, color: colors.textSub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alert.message}</p>
                 </div>
                 <div className="alert-unread-dot" />
               </div>

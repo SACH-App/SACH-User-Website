@@ -10,7 +10,7 @@ const Header = ({ title, onMenuClick }) => {
   const menuRef = useRef(null);
   const navigate = useNavigate();
   const { t, isUrdu, toggleLang } = useLanguage();
-  const { profile } = useUser();
+  const { profile, logout } = useUser();
   const { unreadCount } = useAlerts();
 
   useEffect(() => {
@@ -21,7 +21,8 @@ const Header = ({ title, onMenuClick }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const initials = profile.fullName.split(' ').map(w => w[0]).join('').slice(0, 2);
+  const fullName = profile.full_name || profile.fullName || '';
+  const initials = fullName.split(' ').map(w => w[0]).join('').slice(0, 2);
 
   const menuItemStyle = {
     width: '100%',
@@ -122,7 +123,7 @@ const Header = ({ title, onMenuClick }) => {
               {initials}
             </div>
             <div style={{ textAlign: 'right' }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{profile.fullName}</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{fullName}</p>
               <p style={{ fontSize: 10, color: colors.textSub }}>{t('verifiedCitizen')}</p>
             </div>
             <ChevronDown color={colors.textSub} />
@@ -145,7 +146,7 @@ const Header = ({ title, onMenuClick }) => {
             }}>
               {/* User info */}
               <div style={{ padding: '12px 16px', borderBottom: `1px solid ${colors.divider}` }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{profile.fullName}</p>
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{fullName}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                   <span style={{
                     fontSize: 10,
@@ -194,7 +195,7 @@ const Header = ({ title, onMenuClick }) => {
               <div style={{ height: 1, background: colors.divider, margin: '4px 0' }} />
 
               <button
-                onClick={() => { setMenuOpen(false); navigate('/'); }}
+                onClick={() => { setMenuOpen(false); logout(); }}
                 style={{ ...menuItemStyle, color: '#ef4444' }}
                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.06)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
