@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { colors, getStatusColor, getCategoryIcon, ArrowLeft, SendIcon, EyeIcon, SearchIcon, CheckCircleIcon, LockIcon, ShieldIcon, CalendarIcon, MapPinIcon, HashIcon, FileIcon, UserIcon, LinkIcon, ClipboardIcon, FlagIcon } from '../theme';
+import { colors, getStatusColor, getCategoryIcon, ArrowLeft, SendIcon, EyeIcon, SearchIcon, CheckCircleIcon, LockIcon, ShieldIcon, CalendarIcon, MapPinIcon, HashIcon, FileIcon, UserIcon, LinkIcon, ClipboardIcon, FlagIcon, UploadIcon } from '../theme';
 import { useLanguage } from '../LanguageContext';
 import { fetchWithAuth } from '../utils/api';
 
@@ -20,23 +20,51 @@ const FirDetailPage = () => {
   const { t } = useLanguage();
   const [fir, setFir] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [uploadingEvidence, setUploadingEvidence] = useState(false);
+
+  const fetchFir = async () => {
+    try {
+      const res = await fetchWithAuth(`/api/v1/user/fir/${firId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setFir(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch FIR detail', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchFir = async () => {
-      try {
-        const res = await fetchWithAuth(`/api/v1/user/fir/${firId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setFir(data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch FIR detail', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchFir();
   }, [firId]);
+
+  const handleEvidenceUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingEvidence(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetchWithAuth(`/api/v1/user/fir/${fir.id}/evidence`, {
+        method: 'POST',
+        body: formData
+      });
+      if (res.ok) {
+        await fetchFir();
+        alert('Evidence uploaded successfully!');
+      } else {
+        const errData = await res.json();
+        alert(errData.detail || 'Failed to upload evidence');
+      }
+    } catch (err) {
+      console.error('Evidence upload error:', err);
+      alert('An error occurred while uploading evidence.');
+    } finally {
+      setUploadingEvidence(false);
+    }
+  };
 
   if (loading) return <div style={{ padding: 20, textAlign: 'center' }}>Loading...</div>;
 
@@ -155,10 +183,10 @@ const FirDetailPage = () => {
       )}
 
       {/* Evidence */}
-      {fir.evidence && fir.evidence.length > 0 && (
-        <div className="sach-card hoverable" style={{ marginBottom: 24 }}>
-          <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}><FileIcon size={14} color={colors.gold} /> Attached Evidence</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className="sach-card hoverable" style={{ marginBottom: 24 }}>
+        <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}><FileIcon size={14} color={colors.gold} /> Attached Evidence</h4>
+        {fir.evidence && fir.evidence.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
             {fir.evidence.map(ev => (
               <a key={ev.id} href={ev.file_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, background: 'rgba(255,255,255,0.05)', borderRadius: 8, textDecoration: 'none', color: '#fff' }}>
                 <FileIcon size={16} color={colors.textSub} />
@@ -167,8 +195,20 @@ const FirDetailPage = () => {
               </a>
             ))}
           </div>
+        ) : (
+          <p style={{ fontSize: 12, color: colors.textSub, marginBottom: 16 }}>No evidence attached to this case yet.</p>
+        )}
+
+        <div style={{ borderTop: `1px solid ${colors.divider}`, paddingTop: 16 }}>
+          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', borderRadius: 8, border: `1.5px dashed ${colors.divider}`, cursor: 'pointer', background: 'rgba(255,255,255,0.02)' }} className="hoverable">
+            <input type="file" style={{ display: 'none' }} onChange={handleEvidenceUpload} disabled={uploadingEvidence} accept="image/*,.pdf" />
+            <UploadIcon size={16} color={colors.gold} />
+            <span style={{ fontSize: 13, color: colors.textSub }}>
+              {uploadingEvidence ? 'Uploading...' : 'Attach New Evidence (Image/PDF)'}
+            </span>
+          </label>
         </div>
-      )}
+      </div>
 
       {/* Comments / Updates */}
       {fir.comments && fir.comments.length > 0 && (
