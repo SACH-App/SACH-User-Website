@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import L from 'leaflet';
 import { colors, getStatusColor, getCategoryIcon, ArrowLeft, SendIcon, EyeIcon, SearchIcon, CheckCircleIcon, LockIcon, ShieldIcon, CalendarIcon, MapPinIcon, HashIcon, FileIcon, UserIcon, LinkIcon, ClipboardIcon, FlagIcon, UploadIcon } from '../theme';
 import { useLanguage } from '../LanguageContext';
 import { fetchWithAuth } from '../utils/api';
@@ -21,6 +22,98 @@ const FirDetailPage = () => {
   const [fir, setFir] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploadingEvidence, setUploadingEvidence] = useState(false);
+
+  const mapContainerRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markerRef = useRef(null);
+
+  useEffect(() => {
+    if (!fir || !mapContainerRef.current) return;
+
+    const initMap = async () => {
+      let lat = fir.latitude;
+      let lng = fir.longitude;
+
+      // Geocoding fallback for legacy FIRs
+      if (lat === null || lng === null || lat === undefined || lng === undefined) {
+        try {
+          const query = encodeURIComponent(fir.incident_location || 'Islamabad, Pakistan');
+          const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data && data.length > 0) {
+              lat = parseFloat(data[0].lat);
+              lng = parseFloat(data[0].lon);
+            }
+          }
+        } catch (err) {
+          console.error('Forward geocoding fallback error:', err);
+        }
+      }
+
+      // Default fallback
+      if (lat === null || lng === null || lat === undefined || lng === undefined) {
+        lat = 33.6844;
+        lng = 73.0479;
+      }
+
+      if (!mapInstanceRef.current && mapContainerRef.current) {
+        const map = L.map(mapContainerRef.current, {
+          zoomControl: false,
+          dragging: false,
+          scrollWheelZoom: false,
+          doubleClickZoom: false,
+          boxZoom: false,
+          keyboard: false,
+          touchZoom: false,
+          attributionControl: false
+        }).setView([lat, lng], 14);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19
+        }).addTo(map);
+
+        L.DomUtil.addClass(map.getContainer(), 'sach-dark-map');
+
+        const goldPinIcon = L.divIcon({
+          html: `<div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%);">
+            <div style="background: #D4AF37; width: 32px; height: 32px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2.5px solid #060E08; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+              <div style="width: 10px; height: 10px; background: #060E08; border-radius: 50%; transform: rotate(45deg);"></div>
+            </div>
+            <div style="background: rgba(212,175,55,0.4); width: 8px; height: 8px; border-radius: 50%; margin-top: -2px; filter: blur(1px);"></div>
+          </div>`,
+          className: 'custom-gold-pin',
+          iconSize: [32, 40],
+          iconAnchor: [16, 40]
+        });
+
+        const marker = L.marker([lat, lng], {
+          icon: goldPinIcon
+        }).addTo(map);
+
+        mapInstanceRef.current = map;
+        markerRef.current = marker;
+      } else if (mapInstanceRef.current && markerRef.current) {
+        mapInstanceRef.current.setView([lat, lng], 14);
+        markerRef.current.setLatLng([lat, lng]);
+        setTimeout(() => {
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.invalidateSize();
+          }
+        }, 100);
+      }
+    };
+
+    initMap();
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        markerRef.current = null;
+      }
+    };
+  }, [fir]);
 
   const fetchFir = async () => {
     try {
@@ -151,16 +244,7 @@ const FirDetailPage = () => {
         <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
           <h4 style={{ fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}><MapPinIcon size={14} color={colors.gold} /> Incident Location Map</h4>
         </div>
-        <div style={{ height: 200, background: 'rgba(1,118,58,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-          {/* Placeholder for real map integration (e.g. Google Maps, Leaflet) */}
-          <div style={{ textAlign: 'center', opacity: 0.6 }}>
-            <MapPinIcon size={32} color={colors.gold} />
-            <p style={{ fontSize: 12, marginTop: 8, color: colors.textSub }}>Map integration pending...</p>
-          </div>
-          {/* Decorative map elements to look cool */}
-          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 100, height: 100, border: `1px solid ${colors.gold}`, borderRadius: '50%', opacity: 0.2 }}></div>
-          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 200, height: 200, border: `1px dashed ${colors.green}`, borderRadius: '50%', opacity: 0.1 }}></div>
-        </div>
+        <div ref={mapContainerRef} className="sach-dark-map" style={{ height: 220, position: 'relative' }} />
       </div>
 
       {/* Description */}

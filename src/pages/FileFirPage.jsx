@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import L from 'leaflet';
 import { colors, categories, cities, cityDistricts, generateBlockchainHash, validators, MapPinIcon, MapIcon, CalendarIcon, FileIcon, UploadIcon, CheckCircleIcon, InfoIcon, ShieldCheckIcon, ChevronRight, LinkIcon } from '../theme';
 import { useLanguage } from '../LanguageContext';
 import { useFirs } from '../stores/FirStore';
@@ -25,7 +26,141 @@ const FileFirPage = () => {
   const [description, setDescription] = useState('');
   const [evidenceFile, setEvidenceFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Coordinates & Map Refs
+  const [latitude, setLatitude] = useState(33.6844); // Islamabad default
+  const [longitude, setLongitude] = useState(73.0479); // Islamabad default
+  const mapContainerRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markerRef = useRef(null);
+
   const availableDistricts = city ? (cityDistricts[city] || []) : [];
+
+  const performReverseGeocoding = async (lat, lng) => {
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=en`);
+      if (response.ok) {
+        const data = await response.json();
+        const addressData = data.address || {};
+        
+        // Extract road/neighbourhood/suburb
+        const street = addressData.road || addressData.suburb || addressData.neighbourhood || addressData.amenity || addressData.village || data.display_name.split(',')[0] || 'Incident Location';
+        const cityVal = addressData.city || addressData.town || addressData.village || addressData.county || 'Islamabad';
+        const districtVal = addressData.county || addressData.suburb || addressData.city_district || '';
+
+        setAddress(street);
+        
+        const matchedCity = cities.find(c => cityVal.toLowerCase().includes(c.toLowerCase()) || c.toLowerCase().includes(cityVal.toLowerCase()));
+        if (matchedCity) {
+          setCity(matchedCity);
+          const districtsList = cityDistricts[matchedCity] || [];
+          const matchDist = districtsList.find(d => districtVal.toLowerCase().includes(d.toLowerCase()) || d.toLowerCase().includes(districtVal.toLowerCase())) || districtsList[0] || '';
+          setDistrict(matchDist);
+        } else {
+          // Defaults if no city is found in our system
+          setCity('Islamabad');
+          setDistrict('Islamabad Capital Territory');
+        }
+      }
+    } catch (err) {
+      console.error('Reverse geocoding error:', err);
+    }
+  };
+
+  const handleUseGps = () => {
+    if (navigator.geolocation) {
+      setUseGps(true);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          setLatitude(lat);
+          setLongitude(lng);
+          
+          if (mapInstanceRef.current && markerRef.current) {
+            mapInstanceRef.current.flyTo([lat, lng], 16);
+            markerRef.current.setLatLng([lat, lng]);
+          }
+          performReverseGeocoding(lat, lng);
+        },
+        (error) => {
+          console.error("GPS Error:", error);
+          alert("Could not get your current location. Please select manually on the map.");
+          setUseGps(false);
+        }
+      );
+    } else {
+      alert("Geolocation is not supported by your browser.");
+    }
+  };
+
+  // Initialize interactive map in Step 0
+  useEffect(() => {
+    if (step !== 0 || !mapContainerRef.current) return;
+    
+    if (!mapInstanceRef.current) {
+      const map = L.map(mapContainerRef.current, {
+        zoomControl: true,
+        attributionControl: false
+      }).setView([latitude, longitude], 13);
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+      }).addTo(map);
+
+      // Apply custom premium dark classes to leaflet pane
+      L.DomUtil.addClass(map.getContainer(), 'sach-dark-map');
+      
+      const goldPinIcon = L.divIcon({
+        html: `<div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%);">
+          <div style="background: #D4AF37; width: 32px; height: 32px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2.5px solid #060E08; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+            <div style="width: 10px; height: 10px; background: #060E08; border-radius: 50%; transform: rotate(45deg);"></div>
+          </div>
+          <div style="background: rgba(212,175,55,0.4); width: 8px; height: 8px; border-radius: 50%; margin-top: -2px; filter: blur(1px);"></div>
+        </div>`,
+        className: 'custom-gold-pin',
+        iconSize: [32, 40],
+        iconAnchor: [16, 40]
+      });
+
+      const marker = L.marker([latitude, longitude], {
+        icon: goldPinIcon,
+        draggable: true
+      }).addTo(map);
+
+      mapInstanceRef.current = map;
+      markerRef.current = marker;
+
+      marker.on('dragend', () => {
+        const position = marker.getLatLng();
+        setLatitude(position.lat);
+        setLongitude(position.lng);
+        performReverseGeocoding(position.lat, position.lng);
+      });
+
+      map.on('click', (e) => {
+        const { lat, lng } = e.latlng;
+        marker.setLatLng([lat, lng]);
+        setLatitude(lat);
+        setLongitude(lng);
+        performReverseGeocoding(lat, lng);
+      });
+    } else {
+      setTimeout(() => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.invalidateSize();
+        }
+      }, 100);
+    }
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        markerRef.current = null;
+      }
+    };
+  }, [step]);
 
   const validateStep = () => {
     const errs = {};
@@ -71,7 +206,9 @@ const FileFirPage = () => {
         incident_date: isoDate,
         incident_location: `${address}, ${district}, ${city}`,
         category: backendCategory,
-        priority: 'medium'
+        priority: 'medium',
+        latitude,
+        longitude
       };
 
       // 3. Submit FIR
@@ -134,12 +271,8 @@ const FileFirPage = () => {
           <div>
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}><MapPinIcon size={18} color={colors.gold} /> {t('stepLocation')}</h3>
             <p style={{ fontSize: 12, color: colors.textSub, marginBottom: 20 }}>Enter the incident location details</p>
-            <div style={{ width: '100%', height: 180, borderRadius: 12, background: 'linear-gradient(135deg, #0a1f12, #081a0e)', border: `1.5px solid ${colors.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', width: '100%', height: '100%', background: 'radial-gradient(circle at 50% 50%, rgba(1,118,58,0.1), transparent 70%)' }} />
-              <div style={{ textAlign: 'center', zIndex: 1 }}><MapIcon size={32} color={colors.textSub} /><p style={{ fontSize: 11, color: colors.textSub, marginTop: 6 }}>Map view</p></div>
-              {useGps && <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 20, height: 20, borderRadius: '50%', background: colors.green, border: '3px solid #fff', boxShadow: `0 0 12px ${colors.green}`, zIndex: 2, animation: 'pulse 2s infinite' }} />}
-            </div>
-            <button className={`sach-btn ${useGps ? 'sach-btn-gradient' : 'sach-btn-outline'}`} style={{ marginBottom: 20, padding: '10px 16px', fontSize: 13 }} onClick={() => setUseGps(!useGps)}>
+            <div ref={mapContainerRef} className="sach-map-container sach-dark-map" style={{ marginBottom: 16 }} />
+            <button className={`sach-btn ${useGps ? 'sach-btn-gradient' : 'sach-btn-outline'}`} style={{ marginBottom: 20, padding: '10px 16px', fontSize: 13 }} onClick={handleUseGps}>
               <MapPinIcon size={14} /> {useGps ? t('usingCurrentLocation') : t('useCurrentLocation')}
             </button>
             <label className="sach-label">{t('streetAddress')}</label>
