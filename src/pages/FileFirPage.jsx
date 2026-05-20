@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
-import { colors, categories, cities, cityDistricts, generateBlockchainHash, validators, MapPinIcon, MapIcon, CalendarIcon, FileIcon, UploadIcon, CheckCircleIcon, InfoIcon, ShieldCheckIcon, ChevronRight, LinkIcon } from '../theme';
+import { colors, categories, cities, cityDistricts, generateSecureHash, validators, MapPinIcon, MapIcon, CalendarIcon, FileIcon, UploadIcon, CheckCircleIcon, InfoIcon, ShieldCheckIcon, ChevronRight, LinkIcon } from '../theme';
 import { useLanguage } from '../LanguageContext';
 import { useFirs } from '../stores/FirStore';
 import { fetchWithAuth } from '../utils/api';
@@ -112,7 +112,7 @@ const FileFirPage = () => {
       L.DomUtil.addClass(map.getContainer(), 'sach-dark-map');
       
       const goldPinIcon = L.divIcon({
-        html: `<div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%);">
+        html: `<div style="display: flex; flex-direction: column; align-items: center;">
           <div style="background: #D4AF37; width: 32px; height: 32px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2.5px solid #060E08; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
             <div style="width: 10px; height: 10px; background: #060E08; border-radius: 50%; transform: rotate(45deg);"></div>
           </div>
@@ -204,7 +204,7 @@ const FileFirPage = () => {
         title: category,
         description,
         incident_date: isoDate,
-        incident_location: `${address}, ${district}, ${city}`,
+        incident_location: `${address}, ${district}, ${city} [${latitude.toFixed(6)},${longitude.toFixed(6)}]`,
         category: backendCategory,
         priority: 'medium',
         latitude,
@@ -260,7 +260,7 @@ const FileFirPage = () => {
                 }}>{i < step ? <CheckCircleIcon size={14} color="#fff" /> : stepIcons[i]}</div>
                 <span className="stepper-label" style={{ color: i <= step ? colors.green : colors.textSub, fontWeight: i === step ? 700 : 500 }}>{t(`step${label}`)}</span>
               </div>
-              {i < steps.length - 1 && <div className="stepper-line" style={{ flex: 1, background: i < step ? colors.green : colors.divider, marginTop: 14 }} />}
+              {i < steps.length - 1 && <div className="stepper-line" style={{ flex: 1, background: i < step ? colors.green : 'rgba(255,255,255,0.35)', margin: '14px 10px 0 10px', height: 3, borderRadius: 2 }} />}
             </React.Fragment>
           ))}
         </div>
@@ -319,7 +319,7 @@ const FileFirPage = () => {
           <div>
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}><UploadIcon size={18} color={colors.gold} /> {t('stepEvidence')}</h3>
             <p style={{ fontSize: 12, color: colors.textSub, marginBottom: 20 }}>{t('uploadHint')}</p>
-            <label className="upload-zone hoverable" style={{ borderColor: evidenceFile ? colors.green : colors.divider, background: evidenceFile ? 'rgba(1,118,58,0.06)' : 'transparent', display: 'block', cursor: 'pointer' }}>
+            <label className="upload-zone hoverable" style={{ borderColor: evidenceFile ? colors.green : colors.divider, background: evidenceFile ? 'rgba(1,118,58,0.06)' : 'transparent', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textAlign: 'center' }}>
               <input type="file" style={{ display: 'none' }} onChange={(e) => setEvidenceFile(e.target.files[0])} accept="image/*,.pdf" />
               {evidenceFile ? <CheckCircleIcon size={36} color={colors.green} /> : <UploadIcon size={36} color={colors.textSub} />}
               <p style={{ fontSize: 14, fontWeight: 600, color: evidenceFile ? colors.green : colors.textSub, marginTop: 8 }}>{evidenceFile ? evidenceFile.name : t('tapToUpload')}</p>
@@ -349,7 +349,7 @@ const FileFirPage = () => {
               <p style={{ fontSize: 16, fontWeight: 800, color: colors.gold, marginTop: 2 }}>{submittedFir.tracking_number}</p>
             </div>
             <div style={{ background: 'rgba(1,118,58,0.04)', border: '1px solid rgba(1,118,58,0.15)', borderRadius: 10, padding: 10, marginBottom: 20 }}>
-              <span style={{ fontSize: 10, color: colors.green, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><LinkIcon size={10} color={colors.green} /> Blockchain Hash</span>
+              <span style={{ fontSize: 10, color: colors.green, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><LinkIcon size={10} color={colors.green} /> Secure Cryptographic Hash</span>
               <p style={{ fontSize: 9, fontFamily: 'monospace', color: '#7FFFB8', marginTop: 4, wordBreak: 'break-all', lineHeight: 1.5 }}>{submittedFir.blockchain_hash || 'Pending Confirmation'}</p>
             </div>
             <button className="sach-btn sach-btn-gradient" onClick={() => navigate('/dashboard')}>{t('viewDashboard')}</button>

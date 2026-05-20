@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { colors, getStatusColor, getCategoryIcon, SearchIcon, PlusIcon, FolderIcon, ChevronRight, MapPinIcon } from '../theme';
+import { colors, getStatusColor, formatStatus, getCategoryIcon, SearchIcon, PlusIcon, FolderIcon, ChevronRight, MapPinIcon } from '../theme';
 import { useLanguage } from '../LanguageContext';
 import { fetchWithAuth } from '../utils/api';
 
@@ -94,7 +94,7 @@ const MyFirsPage = () => {
                       <div className="fir-card-id">{fir.tracking_number}</div>
                       <div className="fir-card-date">{dateStr}</div>
                     </div>
-                    <span className="status-badge" style={{ background: `${statusColor}18`, color: statusColor, border: `1px solid ${statusColor}44` }}>{fir.status}</span>
+                    <span className="status-badge" style={{ background: `${statusColor}18`, color: statusColor, border: `1px solid ${statusColor}44` }}>{formatStatus(fir.status)}</span>
                   </div>
                   {fir.category && <div style={{ fontSize: 12, color: colors.gold, fontWeight: 600, marginTop: 6 }}>{fir.category}</div>}
                   <div className="fir-card-title">{fir.description.substring(0, 80)}...</div>

@@ -13,10 +13,13 @@ const EditProfilePage = () => {
     email: profile?.email || '',
     address: profile?.address || ''
   });
-  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [errors, setErrors] = useState({});
+  const [passErrors, setPassErrors] = useState({});
   const [showToast, setShowToast] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
+  // Separate loading states for each section
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
 
   const onChange = (k, v) => setForm({ ...form, [k]: v });
   const onPassChange = (k, v) => setPasswordForm({ ...passwordForm, [k]: v });
@@ -32,14 +35,22 @@ const EditProfilePage = () => {
     return Object.keys(errs).length === 0;
   };
 
+  const validatePassword = () => {
+    const errs = {};
+    if (passwordForm.newPassword.length < 8) errs.newPassword = 'New password must be at least 8 characters';
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) errs.confirmPassword = 'Passwords do not match';
+    setPassErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const handleSave = async () => {
     if (validate()) {
-      setIsSaving(true);
+      setIsSavingProfile(true);
       const res = await saveEdits({
         phone: form.phone === '+92 ' ? null : form.phone,
         email: form.email
       });
-      setIsSaving(false);
+      setIsSavingProfile(false);
       if (res.success) {
         setShowToast('Profile updated successfully');
         setTimeout(() => setShowToast(''), 3000);
@@ -50,11 +61,8 @@ const EditProfilePage = () => {
   };
 
   const handleChangePassword = async () => {
-    if (passwordForm.newPassword.length < 8) {
-      alert('New password must be at least 8 characters');
-      return;
-    }
-    setIsSaving(true);
+    if (!validatePassword()) return;
+    setIsSavingPassword(true);
     try {
       const { fetchWithAuth } = await import('../utils/api');
       const res = await fetchWithAuth('/api/v1/user/change-password', {
@@ -66,7 +74,8 @@ const EditProfilePage = () => {
       });
       if (res.ok) {
         setShowToast('Password changed successfully');
-        setPasswordForm({ currentPassword: '', newPassword: '' });
+        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        setPassErrors({});
         setTimeout(() => setShowToast(''), 3000);
       } else {
         const data = await res.json();
@@ -75,7 +84,7 @@ const EditProfilePage = () => {
     } catch (err) {
       alert('Network error');
     } finally {
-      setIsSaving(false);
+      setIsSavingPassword(false);
     }
   };
 
@@ -85,7 +94,7 @@ const EditProfilePage = () => {
   const lockedFields = [
     { icon: <UserIcon size={16} color={colors.gold} />, label: 'Full Name', value: profile.full_name || profile.fullName },
     { icon: <IdCardIcon size={16} color={colors.gold} />, label: 'CNIC Number', value: profile.cnic },
-    { icon: <MapPinIcon size={16} color={colors.gold} />, label: 'Verified Address (NADRA)', value: profile.address || 'No address on file' },
+    { icon: <MapPinIcon size={16} color={colors.gold} />, label: 'Verified Permanent Address', value: profile.address || 'No address on file' },
   ];
 
   return (
@@ -100,7 +109,7 @@ const EditProfilePage = () => {
         <div>
           <span style={{ fontSize: 12, fontWeight: 700, color: colors.green }}>Verified Fields</span>
           <p style={{ fontSize: 11, color: colors.textSub, lineHeight: 1.5, marginTop: 4 }}>
-            Name, CNIC, and Address are locked as they are verified from NADRA. These fields cannot be modified.
+            Name, CNIC, and Address are locked as they are officially verified and non-modifiable.
           </p>
         </div>
       </div>
@@ -133,8 +142,8 @@ const EditProfilePage = () => {
         </div>
         {errors.email && <p className="field-error" style={{ marginBottom: 24 }}>{errors.email}</p>}
 
-        <button className="sach-btn sach-btn-gradient" onClick={handleSave} disabled={isSaving}>
-          <SaveIcon size={16} /> {isSaving ? 'Saving...' : 'Save Profile Changes'}
+        <button className="sach-btn sach-btn-gradient" onClick={handleSave} disabled={isSavingProfile}>
+          <SaveIcon size={16} /> {isSavingProfile ? 'Saving...' : 'Save Profile Changes'}
         </button>
       </div>
 
@@ -149,13 +158,32 @@ const EditProfilePage = () => {
         </div>
 
         <label className="sach-label">New Password</label>
-        <div className="sach-input-icon" style={{ marginBottom: 24 }}>
+        <div className="sach-input-icon" style={{ marginBottom: passErrors.newPassword ? 4 : 16 }}>
           <span className="icon-left"><LockIcon size={16} color={colors.gold} /></span>
           <input type="password" className="sach-input" placeholder="Enter new password (min 8 chars)" value={passwordForm.newPassword} onChange={(e) => onPassChange('newPassword', e.target.value)} />
         </div>
+        {passErrors.newPassword && <p className="field-error">{passErrors.newPassword}</p>}
 
-        <button className="sach-btn sach-btn-outline" onClick={handleChangePassword} disabled={isSaving || !passwordForm.currentPassword || !passwordForm.newPassword}>
-          <LockIcon size={16} /> Update Password
+        <label className="sach-label" style={{ marginTop: passErrors.newPassword ? 12 : 0 }}>Confirm New Password</label>
+        <div className="sach-input-icon" style={{ marginBottom: passErrors.confirmPassword ? 4 : 24 }}>
+          <span className="icon-left"><LockIcon size={16} color={passwordForm.confirmPassword && passwordForm.newPassword === passwordForm.confirmPassword ? colors.green : colors.gold} /></span>
+          <input
+            type="password"
+            className="sach-input"
+            placeholder="Re-enter new password"
+            value={passwordForm.confirmPassword}
+            onChange={(e) => onPassChange('confirmPassword', e.target.value)}
+            style={{ borderColor: passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword ? 'rgba(220,38,38,0.5)' : undefined }}
+          />
+        </div>
+        {passErrors.confirmPassword && <p className="field-error" style={{ marginBottom: 24 }}>{passErrors.confirmPassword}</p>}
+
+        <button
+          className="sach-btn sach-btn-outline"
+          onClick={handleChangePassword}
+          disabled={isSavingPassword || !passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword}
+        >
+          <LockIcon size={16} /> {isSavingPassword ? 'Updating...' : 'Update Password'}
         </button>
       </div>
 

@@ -1,19 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import L from 'leaflet';
-import { colors, getStatusColor, getCategoryIcon, ArrowLeft, SendIcon, EyeIcon, SearchIcon, CheckCircleIcon, LockIcon, ShieldIcon, CalendarIcon, MapPinIcon, HashIcon, FileIcon, UserIcon, LinkIcon, ClipboardIcon, FlagIcon, UploadIcon } from '../theme';
+import { colors, getStatusColor, formatStatus, getCategoryIcon, ArrowLeft, SendIcon, EyeIcon, SearchIcon, CheckCircleIcon, LockIcon, ShieldIcon, CalendarIcon, MapPinIcon, HashIcon, FileIcon, UserIcon, LinkIcon, ClipboardIcon, FlagIcon, UploadIcon, ClockIcon, PhoneIcon, MailIcon } from '../theme';
 import { useLanguage } from '../LanguageContext';
 import { fetchWithAuth } from '../utils/api';
 
 const pipelineIcons = [
-  <SendIcon size={14} color="#fff" />,
+  <ClockIcon size={14} color="#fff" />,
   <EyeIcon size={14} color="#fff" />,
   <SearchIcon size={14} color="#fff" />,
   <CheckCircleIcon size={14} color="#fff" />,
   <LockIcon size={14} color="#fff" />,
 ];
-const pipelineLabels = ['Filed', 'Reviewed', 'Investigating', 'Resolved', 'Closed'];
-const pipelineMap = { 'Pending': 0, 'Under Review': 1, 'Investigating': 2, 'Resolved': 3, 'Closed': 4 };
+const pipelineLabels = ['Pending', 'Reviewed', 'Investigating', 'Resolved', 'Closed'];
+const pipelineMap = {
+  'pending': 0, 'filed': 0,
+  'under_review': 1, 'under review': 1, 'reviewed': 1,
+  'under_investigation': 2, 'under investigation': 2, 'investigating': 2,
+  'resolved': 3,
+  'closed': 4
+};
 
 const FirDetailPage = () => {
   const { firId } = useParams();
@@ -22,6 +28,7 @@ const FirDetailPage = () => {
   const [fir, setFir] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploadingEvidence, setUploadingEvidence] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -36,18 +43,26 @@ const FirDetailPage = () => {
 
       // Geocoding fallback for legacy FIRs
       if (lat === null || lng === null || lat === undefined || lng === undefined) {
-        try {
-          const query = encodeURIComponent(fir.incident_location || 'Islamabad, Pakistan');
-          const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`);
-          if (response.ok) {
-            const data = await response.json();
-            if (data && data.length > 0) {
-              lat = parseFloat(data[0].lat);
-              lng = parseFloat(data[0].lon);
+        // First try to extract embedded coords from incident_location string e.g. "...[33.123456,73.123456]"
+        const coordMatch = (fir.incident_location || '').match(/\[(-?\d+\.\d+),(-?\d+\.\d+)\]/);
+        if (coordMatch) {
+          lat = parseFloat(coordMatch[1]);
+          lng = parseFloat(coordMatch[2]);
+        } else {
+          try {
+            const locationQuery = (fir.incident_location || '').replace(/\[.*?\]/, '').trim();
+            const query = encodeURIComponent(locationQuery || 'Islamabad, Pakistan');
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`);
+            if (response.ok) {
+              const data = await response.json();
+              if (data && data.length > 0) {
+                lat = parseFloat(data[0].lat);
+                lng = parseFloat(data[0].lon);
+              }
             }
+          } catch (err) {
+            console.error('Forward geocoding fallback error:', err);
           }
-        } catch (err) {
-          console.error('Forward geocoding fallback error:', err);
         }
       }
 
@@ -76,7 +91,7 @@ const FirDetailPage = () => {
         L.DomUtil.addClass(map.getContainer(), 'sach-dark-map');
 
         const goldPinIcon = L.divIcon({
-          html: `<div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%);">
+          html: `<div style="display: flex; flex-direction: column; align-items: center;">
             <div style="background: #D4AF37; width: 32px; height: 32px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2.5px solid #060E08; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
               <div style="width: 10px; height: 10px; background: #060E08; border-radius: 50%; transform: rotate(45deg);"></div>
             </div>
@@ -171,7 +186,7 @@ const FirDetailPage = () => {
   );
 
   const statusColor = getStatusColor(fir.status);
-  const activeStep = pipelineMap[fir.status] ?? 0;
+  const activeStep = pipelineMap[fir.status?.toLowerCase()] ?? 0;
 
   return (
     <div className="page-enter">
@@ -185,7 +200,7 @@ const FirDetailPage = () => {
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <h2 style={{ fontSize: 18, fontWeight: 800 }}>{fir.tracking_number}</h2>
-            <span className="status-badge" style={{ background: `${statusColor}18`, color: statusColor, border: `1px solid ${statusColor}44` }}>{fir.status}</span>
+            <span className="status-badge" style={{ background: `${statusColor}18`, color: statusColor, border: `1px solid ${statusColor}44` }}>{formatStatus(fir.status)}</span>
           </div>
           <h3 style={{ fontSize: 15, fontWeight: 600, color: '#fff', marginTop: 8 }}>{fir.title}</h3>
           <p style={{ fontSize: 12, color: colors.textSub, marginTop: 4 }}>{fir.category} &middot; {new Date(fir.created_at).toLocaleDateString()}</p>
@@ -208,7 +223,7 @@ const FirDetailPage = () => {
                   }}>{pipelineIcons[i]}</div>
                   <span className="timeline-label" style={{ color: done ? '#fff' : 'rgba(255,255,255,0.45)', fontWeight: i === activeStep ? 700 : 500 }}>{label}</span>
                 </div>
-                {i < pipelineLabels.length - 1 && <div className="timeline-line" style={{ background: i < activeStep ? colors.green : 'rgba(255,255,255,0.1)' }} />}
+                {i < pipelineLabels.length - 1 && <div className="timeline-line" style={{ background: i < activeStep ? colors.green : 'rgba(255,255,255,0.35)' }} />}
               </React.Fragment>
             );
           })}
@@ -235,7 +250,7 @@ const FirDetailPage = () => {
         </div>
         <div className="sach-card-sm hoverable" style={{ gridColumn: '1 / -1' }}>
           <div className="detail-row"><MapPinIcon size={14} color={colors.gold} /><span className="detail-label">Location</span></div>
-          <p className="detail-value">{fir.incident_location || 'Not provided'}</p>
+          <p className="detail-value">{(fir.incident_location || 'Not provided').replace(/\s*\[.*?\]\s*$/, '')}</p>
         </div>
       </div>
 
@@ -254,17 +269,33 @@ const FirDetailPage = () => {
         {fir.incident_date && <p style={{ fontSize: 11, color: colors.textSub, marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}><CalendarIcon size={11} color={colors.textSub} /> Incident: {new Date(fir.incident_date).toLocaleString()}</p>}
       </div>
 
-      {/* Officer card */}
-      {fir.officer_name && (
-        <div className="sach-card hoverable" style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div className="officer-avatar"><ShieldIcon size={20} color="#fff" /></div>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 14, fontWeight: 700 }}>{fir.officer_name}</p>
-            <p style={{ fontSize: 11, color: colors.textSub }}>Assigned Investigating Officer</p>
+      {/* Assigned Officer card */}
+      <div className="sach-card hoverable" style={{ marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div className="officer-avatar" style={{ background: fir.officer_name ? 'rgba(1,118,58,0.15)' : 'rgba(255,255,255,0.03)', width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ShieldIcon size={20} color={fir.officer_name ? colors.gold : colors.textSub} />
           </div>
-          <div className="officer-badge"><UserIcon size={14} color={colors.gold} /></div>
+          <div>
+            <p style={{ fontSize: 12, color: colors.textSub, fontWeight: 500 }}>Assigned Officer</p>
+            <p style={{ fontSize: 14, fontWeight: 700, marginTop: 2, color: fir.officer_name ? '#fff' : 'rgba(255,255,255,0.4)' }}>
+              {fir.officer_name || 'Not Assigned Yet'}
+            </p>
+          </div>
         </div>
-      )}
+        {fir.officer_name ? (
+          <button 
+            className="sach-btn sach-btn-gradient" 
+            style={{ width: 'auto', padding: '8px 16px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}
+            onClick={() => setContactModalOpen(true)}
+          >
+            <PhoneIcon size={12} /> Contact Officer
+          </button>
+        ) : (
+          <span style={{ fontSize: 12, color: colors.textSub, fontStyle: 'italic', background: 'rgba(255,255,255,0.03)', padding: '4px 10px', borderRadius: 6 }}>
+            Pending Assignment
+          </span>
+        )}
+      </div>
 
       {/* Evidence */}
       <div className="sach-card hoverable" style={{ marginBottom: 24 }}>
@@ -320,9 +351,105 @@ const FirDetailPage = () => {
       {/* Blockchain */}
       {fir.blockchain_hash && (
         <div className="sach-card hoverable" style={{ background: 'rgba(1,118,58,0.04)' }}>
-          <h4 style={{ fontSize: 12, fontWeight: 700, color: colors.green, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}><LinkIcon size={14} color={colors.green} /> Blockchain Immutable Record</h4>
+          <h4 style={{ fontSize: 12, fontWeight: 700, color: colors.green, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}><LinkIcon size={14} color={colors.green} /> Secure Cryptographic Record</h4>
           <p style={{ fontSize: 9, fontFamily: 'monospace', color: '#7FFFB8', wordBreak: 'break-all', lineHeight: 1.6, padding: '10px 14px', background: 'rgba(0,0,0,0.3)', borderRadius: 8 }}>{fir.blockchain_hash}</p>
-          <p style={{ fontSize: 10, color: colors.textSub, marginTop: 8 }}>This record is secured on Hyperledger Fabric and cannot be altered or deleted.</p>
+          <p style={{ fontSize: 10, color: colors.textSub, marginTop: 8 }}>This record is secured via cryptographic digital signature and cannot be altered or deleted.</p>
+        </div>
+      )}
+
+      {/* Contact Officer Modal */}
+      {contactModalOpen && fir.officer_name && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(6, 14, 8, 0.85)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          animation: 'fadeIn 0.25s ease-out'
+        }} onClick={() => setContactModalOpen(false)}>
+          <style>{`
+            @keyframes fadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+            @keyframes scaleUp {
+              from { transform: scale(0.95); opacity: 0; }
+              to { transform: scale(1); opacity: 1; }
+            }
+          `}</style>
+          <div className="sach-card" style={{
+            width: '90%',
+            maxWidth: 420,
+            background: colors.bgCard,
+            border: `1.5px solid rgba(1, 118, 58, 0.3)`,
+            boxShadow: colors.greenGlow,
+            padding: 24,
+            position: 'relative',
+            animation: 'scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+          }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 6, color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ShieldIcon size={20} color={colors.gold} /> Contact Investigating Officer
+            </h3>
+            <p style={{ fontSize: 12, color: colors.textSub, marginBottom: 20 }}>
+              Direct encrypted communication channel for Case ID: <strong>{fir.tracking_number}</strong>
+            </p>
+
+            <div style={{
+              background: 'rgba(255,255,255,0.02)',
+              borderRadius: 12,
+              padding: 16,
+              border: '1px solid rgba(255,255,255,0.05)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 14,
+              marginBottom: 20
+            }}>
+              <div className="profile-avatar" style={{ width: 44, height: 44, borderRadius: '50%', background: colors.green, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <UserIcon size={20} color="#fff" />
+              </div>
+              <div>
+                <h4 style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>{fir.officer_name}</h4>
+                <p style={{ fontSize: 11, color: colors.textSub }}>SACH Investigation Unit</p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
+                <PhoneIcon size={14} color={fir.officer_phone ? colors.gold : colors.textSub} />
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 10, color: colors.textSub }}>Direct Phone</p>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: fir.officer_phone ? '#fff' : 'rgba(255,255,255,0.3)' }}>
+                    {fir.officer_phone || 'Not available'}
+                  </p>
+                </div>
+                {fir.officer_phone && (
+                  <button className="sach-btn-text" style={{ padding: '4px 8px', fontSize: 11, color: colors.gold }} onClick={() => window.location.href = `tel:${fir.officer_phone}`}>Call</button>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
+                <MailIcon size={14} color={fir.officer_email ? colors.gold : colors.textSub} />
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 10, color: colors.textSub }}>Official Email</p>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: fir.officer_email ? '#fff' : 'rgba(255,255,255,0.3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {fir.officer_email || 'Not available'}
+                  </p>
+                </div>
+                {fir.officer_email && (
+                  <button className="sach-btn-text" style={{ padding: '4px 8px', fontSize: 11, color: colors.gold }} onClick={() => window.location.href = `mailto:${fir.officer_email}`}>Email</button>
+                )}
+              </div>
+            </div>
+
+            <button className="sach-btn sach-btn-gradient" style={{ width: '100%' }} onClick={() => setContactModalOpen(false)}>
+              Close Dialog
+            </button>
+          </div>
         </div>
       )}
     </div>
