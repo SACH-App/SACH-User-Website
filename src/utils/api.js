@@ -19,7 +19,7 @@ const processQueue = (error, token = null) => {
 
 export const fetchWithAuth = async (endpoint, options = {}) => {
   let accessToken = localStorage.getItem('sach_access_token');
-  
+
   const headers = {
     'Content-Type': 'application/json',
     ...(options.headers || {}),
@@ -45,7 +45,7 @@ export const fetchWithAuth = async (endpoint, options = {}) => {
     // If 401 Unauthorized, attempt to refresh the token
     if (response.status === 401 && accessToken) {
       const refreshToken = localStorage.getItem('sach_refresh_token');
-      
+
       if (!refreshToken) {
         // No refresh token available, force logout
         localStorage.removeItem('sach_access_token');
@@ -83,11 +83,11 @@ export const fetchWithAuth = async (endpoint, options = {}) => {
         localStorage.setItem('sach_refresh_token', data.refresh_token);
 
         processQueue(null, accessToken);
-        
+
         // Retry original request
         config.headers['Authorization'] = `Bearer ${accessToken}`;
         response = await fetch(`${API_URL}${endpoint}`, config);
-        
+
       } catch (err) {
         processQueue(err, null);
         localStorage.removeItem('sach_access_token');

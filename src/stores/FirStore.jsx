@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { generateBlockchainHash } from '../theme';
+import { generateSecureHash } from '../theme';
 
 const FirContext = createContext();
 
@@ -15,7 +15,7 @@ const makeMockFirs = () => [
     description: 'Motorcycle snatched at gunpoint near F.B. Area market. Two armed suspects on another bike intercepted me near the market alley.',
     incidentDate: '10 Jul 2026, 09:35 PM',
     category: 'Theft / Robbery',
-    blockchainHash: generateBlockchainHash(),
+    blockchainHash: generateSecureHash(),
   },
   {
     id: 'FIR-2026-00127',
@@ -28,7 +28,7 @@ const makeMockFirs = () => [
     description: 'Fraudulent transaction of PKR 35,000 from my debit card through a phishing link received via SMS.',
     incidentDate: '04 Jul 2026, 02:10 PM',
     category: 'Fraud / Scam',
-    blockchainHash: generateBlockchainHash(),
+    blockchainHash: generateSecureHash(),
   },
   {
     id: 'FIR-2026-00099',
@@ -41,7 +41,7 @@ const makeMockFirs = () => [
     description: 'Hit and run incident on Shahrah-e-Faisal near PIDC. The offending vehicle was a white Toyota Corolla.',
     incidentDate: '27 Jun 2026, 06:45 PM',
     category: 'Vehicle Accident',
-    blockchainHash: generateBlockchainHash(),
+    blockchainHash: generateSecureHash(),
   },
   {
     id: 'FIR-2026-00072',
@@ -54,7 +54,7 @@ const makeMockFirs = () => [
     description: 'Unauthorized construction on a residential plot owned by me in Model Colony.',
     incidentDate: '14 Jun 2026, 11:00 AM',
     category: 'Property Dispute',
-    blockchainHash: generateBlockchainHash(),
+    blockchainHash: generateSecureHash(),
   },
   {
     id: 'FIR-2026-00041',
@@ -67,7 +67,7 @@ const makeMockFirs = () => [
     description: 'My cousin went missing from Orangi Town area after his workplace shift. He was found safe later at a relative\'s house.',
     incidentDate: '31 May 2026, 08:00 PM',
     category: 'Missing Person',
-    blockchainHash: generateBlockchainHash(),
+    blockchainHash: generateSecureHash(),
   },
 ];
 

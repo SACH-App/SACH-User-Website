@@ -110,14 +110,26 @@ export const formatPhone = (value) => {
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 export const getStatusColor = (status) => {
-  switch (status) {
-    case 'Pending': return colors.statusPending;
-    case 'Investigating': return colors.statusInvestigating;
-    case 'Resolved': return colors.statusResolved;
-    case 'Closed': return colors.statusClosed;
-    case 'Under Review': return colors.statusReview;
-    default: return colors.textSub;
-  }
+  if (!status) return colors.textSub;
+  const s = status.toLowerCase().replace(/_/g, ' ');
+  if (s === 'pending' || s === 'filed') return colors.statusPending;
+  if (s === 'under review' || s === 'reviewed') return colors.statusReview;
+  if (s === 'investigating' || s === 'under investigation') return colors.statusInvestigating;
+  if (s === 'resolved') return colors.statusResolved;
+  if (s === 'closed') return colors.statusClosed;
+  return colors.textSub;
+};
+
+export const formatStatus = (status) => {
+  if (!status) return '';
+  const s = status.toLowerCase().replace(/_/g, ' ');
+  if (s === 'pending') return 'Pending';
+  if (s === 'filed') return 'Filed';
+  if (s === 'under review' || s === 'reviewed') return 'Under Review';
+  if (s === 'under investigation' || s === 'investigating') return 'Under Investigation';
+  if (s === 'resolved') return 'Resolved';
+  if (s === 'closed') return 'Closed';
+  return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ');
 };
 
 // Returns an SVG icon component for each FIR category
@@ -132,7 +144,7 @@ export const getCategoryIcon = (title) => {
   return <FileIcon size={20} color={colors.textSub} />;
 };
 
-export const generateBlockchainHash = () => {
+export const generateSecureHash = () => {
   const chars = '0123456789abcdef';
   let hash = '0x';
   for (let i = 0; i < 64; i++) hash += chars[Math.floor(Math.random() * chars.length)];

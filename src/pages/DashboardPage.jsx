@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { colors, getStatusColor, getCategoryIcon, UserIcon, CheckCircleIcon, FileIcon, PlusIcon, FolderIcon, ClockIcon, ChevronRight, MapPinIcon, BellIcon } from '../theme';
+import { colors, getStatusColor, formatStatus, getCategoryIcon, UserIcon, CheckCircleIcon, FileIcon, PlusIcon, FolderIcon, ClockIcon, ChevronRight, MapPinIcon, BellIcon } from '../theme';
 import { useLanguage } from '../LanguageContext';
 import { useUser } from '../stores/UserStore';
 import { useAlerts } from '../stores/AlertStore';
@@ -10,7 +10,8 @@ const DashboardPage = () => {
   const navigate = useNavigate();
   const { t, isUrdu } = useLanguage();
   const { profile } = useUser();
-  const { alerts, unreadCount } = useAlerts();
+  const { alerts, unreadCount, markRead } = useAlerts();
+  const [selectedAlert, setSelectedAlert] = useState(null);
 
   const [firs, setFirs] = useState([]);
   const [stats, setStats] = useState({ total: 0, pending: 0, resolved: 0 });
@@ -114,7 +115,7 @@ const DashboardPage = () => {
                         <div className="fir-card-id">{fir.tracking_number}</div>
                         <div className="fir-card-date">{new Date(fir.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                       </div>
-                      <span className="status-badge" style={{ background: `${statusColor}18`, color: statusColor, border: `1px solid ${statusColor}44` }}>{fir.status}</span>
+                      <span className="status-badge" style={{ background: `${statusColor}18`, color: statusColor, border: `1px solid ${statusColor}44` }}>{formatStatus(fir.status)}</span>
                     </div>
                     <div className="fir-card-title">{fir.description}</div>
                     {fir.incident_location && <div className="fir-card-location"><MapPinIcon size={11} color={colors.textSub} /> {fir.incident_location}</div>}
@@ -143,7 +144,7 @@ const DashboardPage = () => {
         ) : (
           <div className="stagger-list">
             {recentAlerts.map((alert, i) => (
-              <div key={alert.id} className="alert-card unread hoverable" onClick={() => navigate('/dashboard/alerts')} style={{ animationDelay: `${i * 60}ms` }}>
+              <div key={alert.id} className="alert-card unread hoverable" onClick={() => { markRead(alert.id); setSelectedAlert(alert); }} style={{ animationDelay: `${i * 60}ms` }}>
                 <div className="alert-icon-circle" style={{ background: 'rgba(1,118,58,0.08)', border: '1px solid rgba(1,118,58,0.2)' }}>
                   <BellIcon size={18} color={colors.gold} />
                 </div>
@@ -157,6 +158,48 @@ const DashboardPage = () => {
           </div>
         )}
       </div>
+
+      {selectedAlert && (
+        <div className="modal-overlay" onClick={() => setSelectedAlert(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            {/* Icon */}
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <div className="modal-icon-circle"><BellIcon size={28} color={colors.gold} /></div>
+            </div>
+
+            {/* Title */}
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, textAlign: 'center' }}>{selectedAlert.title}</h3>
+
+            {/* Message text box */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 10, fontWeight: 700, color: colors.textSub, letterSpacing: 0.5, textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
+                Message
+              </label>
+              <div style={{
+                background: 'rgba(255,255,255,0.03)',
+                border: `1px solid ${colors.divider}`,
+                borderRadius: 10,
+                padding: '14px 16px',
+                fontSize: 13,
+                color: 'rgba(255,255,255,0.8)',
+                lineHeight: 1.7,
+                minHeight: 72,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}>
+                {selectedAlert.message}
+              </div>
+            </div>
+
+            {/* Timestamp */}
+            <p style={{ fontSize: 11, color: colors.textSub, textAlign: 'center', marginBottom: 20 }}>
+              {new Date(selectedAlert.created_at).toLocaleString()}
+            </p>
+
+            <button className="sach-btn sach-btn-outline" onClick={() => setSelectedAlert(null)}>{t('close')}</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

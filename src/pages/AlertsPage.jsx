@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { colors, BellIcon, CheckCircleIcon, TrashIcon } from '../theme';
+import { colors, BellIcon, CheckCircleIcon } from '../theme';
 import { useLanguage } from '../LanguageContext';
 import { useAlerts } from '../stores/AlertStore';
 
 const AlertsPage = () => {
   const { t } = useLanguage();
-  const { alerts, unreadCount, markAllRead, markRead, clearAll } = useAlerts();
+  const { alerts, unreadCount, markAllRead, markRead } = useAlerts();
   const [selectedAlert, setSelectedAlert] = useState(null);
 
   return (
@@ -53,13 +53,41 @@ const AlertsPage = () => {
       {selectedAlert && (
         <div className="modal-overlay" onClick={() => setSelectedAlert(null)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
+            {/* Icon */}
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
               <div className="modal-icon-circle"><BellIcon size={28} color={colors.gold} /></div>
             </div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, textAlign: 'center' }}>{selectedAlert.title}</h3>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.7, textAlign: 'center' }}>{selectedAlert.message}</p>
-            <p style={{ fontSize: 11, color: colors.textSub, marginTop: 12, textAlign: 'center' }}>{new Date(selectedAlert.created_at).toLocaleString()}</p>
-            <button className="sach-btn sach-btn-outline" style={{ marginTop: 20 }} onClick={() => setSelectedAlert(null)}>{t('close')}</button>
+
+            {/* Title */}
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, textAlign: 'center' }}>{selectedAlert.title}</h3>
+
+            {/* Message text box */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 10, fontWeight: 700, color: colors.textSub, letterSpacing: 0.5, textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
+                Message
+              </label>
+              <div style={{
+                background: 'rgba(255,255,255,0.03)',
+                border: `1px solid ${colors.divider}`,
+                borderRadius: 10,
+                padding: '14px 16px',
+                fontSize: 13,
+                color: 'rgba(255,255,255,0.8)',
+                lineHeight: 1.7,
+                minHeight: 72,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}>
+                {selectedAlert.message}
+              </div>
+            </div>
+
+            {/* Timestamp */}
+            <p style={{ fontSize: 11, color: colors.textSub, textAlign: 'center', marginBottom: 20 }}>
+              {new Date(selectedAlert.created_at).toLocaleString()}
+            </p>
+
+            <button className="sach-btn sach-btn-outline" onClick={() => setSelectedAlert(null)}>{t('close')}</button>
           </div>
         </div>
       )}

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { colors, formatCnic, validators, ShieldIcon, LockIcon, IdCardIcon, KeyIcon, EyeIcon, EyeOffIcon, UnlockIcon, MessageIcon, ArrowLeft } from '../theme';
 import { useLanguage } from '../LanguageContext';
 import { useUser } from '../stores/UserStore';
+import sachLogo from '../assets/sach_logo.png';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ const LoginPage = () => {
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotStep, setForgotStep] = useState(1); // 1 = enter CNIC to request, 2 = enter OTP and New Pass
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isForgotLoading, setIsForgotLoading] = useState(false);
 
   useEffect(() => {
@@ -44,12 +46,12 @@ const LoginPage = () => {
   const handleLogin = async (e) => {
     if (e) e.preventDefault();
     if (!validate()) return;
-    
+
     setBackendError('');
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const apiUrl = baseUrl.replace(/\/+$/, '');
-      
+      const baseUrl = import.meta.env.VITE_API_URL || 'https://sachbackend.live';
+      const apiUrl = baseUrl.replace(/\/+$/, '').replace(/\/api\/v1\/?$/i, '');
+
       const formData = new URLSearchParams();
       formData.append('username', cnic);
       formData.append('password', password);
@@ -68,7 +70,7 @@ const LoginPage = () => {
 
       localStorage.setItem('sach_access_token', data.access_token);
       localStorage.setItem('sach_refresh_token', data.refresh_token);
-      
+
       await fetchProfile();
       navigate('/dashboard');
     } catch (err) {
@@ -81,8 +83,8 @@ const LoginPage = () => {
     setBackendError('');
     setIsOtpLoading(true);
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const apiUrl = baseUrl.replace(/\/+$/, '');
+      const baseUrl = import.meta.env.VITE_API_URL || 'https://sachbackend.live';
+      const apiUrl = baseUrl.replace(/\/+$/, '').replace(/\/api\/v1\/?$/i, '');
       const response = await fetch(`${apiUrl}/api/v1/user/login/otp/request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -104,8 +106,8 @@ const LoginPage = () => {
   const handleOtpVerify = async () => {
     if (otp.length === 6) {
       try {
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        const apiUrl = baseUrl.replace(/\/+$/, '');
+        const baseUrl = import.meta.env.VITE_API_URL || 'https://sachbackend.live';
+        const apiUrl = baseUrl.replace(/\/+$/, '').replace(/\/api\/v1\/?$/i, '');
         const response = await fetch(`${apiUrl}/api/v1/user/login/otp/verify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -132,8 +134,8 @@ const LoginPage = () => {
     setBackendError('');
     setIsForgotLoading(true);
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const apiUrl = baseUrl.replace(/\/+$/, '');
+      const baseUrl = import.meta.env.VITE_API_URL || 'https://sachbackend.live';
+      const apiUrl = baseUrl.replace(/\/+$/, '').replace(/\/api\/v1\/?$/i, '');
       const response = await fetch(`${apiUrl}/api/v1/user/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -159,10 +161,14 @@ const LoginPage = () => {
       alert('Enter 6-digit OTP and new password (min 8 chars).');
       return;
     }
+    if (newPassword !== confirmPassword) {
+      alert('Passwords do not match. Please re-enter.');
+      return;
+    }
     setIsForgotLoading(true);
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const apiUrl = baseUrl.replace(/\/+$/, '');
+      const baseUrl = import.meta.env.VITE_API_URL || 'https://sachbackend.live';
+      const apiUrl = baseUrl.replace(/\/+$/, '').replace(/\/api\/v1\/?$/i, '');
       const response = await fetch(`${apiUrl}/api/v1/user/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -192,13 +198,14 @@ const LoginPage = () => {
         setForgotStep(1);
         setPassword('');
         setOtp('');
+        setConfirmPassword('');
         return;
       }
 
       // Save tokens and redirect to dashboard with native SPA navigation
       localStorage.setItem('sach_access_token', loginData.access_token);
       localStorage.setItem('sach_refresh_token', loginData.refresh_token);
-      
+
       await fetchProfile();
       navigate('/dashboard');
 
@@ -215,15 +222,26 @@ const LoginPage = () => {
 
       <div className="auth-topbar">
         <button className="auth-topbar-back" onClick={() => navigate('/')}><ArrowLeft size={16} color={colors.gold} /></button>
-        <div className="auth-topbar-brand">
-          <div className="auth-topbar-icon"><ShieldIcon size={14} color="#fff" /></div>
-          <span className="auth-topbar-text">SACH</span>
+        <div className="auth-topbar-brand" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <img src={sachLogo} alt="SACH Logo" style={{ height: 24, width: 'auto', objectFit: 'contain' }} />
+          <div style={{ width: 1, height: 14, background: colors.divider }} />
+          <span className="auth-topbar-text" style={{ color: colors.gold, fontWeight: 700, letterSpacing: 0.5, fontSize: 11 }}>PORTAL</span>
         </div>
       </div>
 
       <form className="auth-content" autoComplete="off" onSubmit={handleLogin}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div className="auth-icon-circle"><LockIcon size={26} color={colors.green} /></div>
+          <img
+            src={sachLogo}
+            alt="SACH Logo"
+            style={{
+              height: 80,
+              width: 'auto',
+              objectFit: 'contain',
+              marginBottom: 12,
+              filter: 'drop-shadow(0 0 16px rgba(212, 175, 55, 0.45))',
+            }}
+          />
           <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 6 }}>Secure Login</h2>
           <p style={{ fontSize: 13, color: colors.textSub }}>Access your SACH Citizens Portal</p>
         </div>
@@ -289,7 +307,7 @@ const LoginPage = () => {
               <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Email Verification</h3>
               <p style={{ fontSize: 13, color: colors.textSub, marginBottom: 24 }}>Enter the 6-digit OTP sent to your registered email address</p>
             </div>
-            <input className="sach-input" placeholder="000000" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g,'').slice(0,6))} maxLength={6}
+            <input className="sach-input" placeholder="000000" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} maxLength={6}
               style={{ textAlign: 'center', fontSize: 24, letterSpacing: 12, fontWeight: 700 }} />
             <button className="sach-btn sach-btn-gradient" style={{ marginTop: 20 }} onClick={handleOtpVerify} disabled={otp.length !== 6}>Verify OTP</button>
             <button className="sach-btn-text" style={{ marginTop: 12, width: '100%', color: colors.textSub }} onClick={() => setShowOtpModal(false)}>Cancel</button>
@@ -307,7 +325,7 @@ const LoginPage = () => {
                 {forgotStep === 1 ? 'Enter your CNIC to receive a reset OTP.' : 'Enter the 6-digit OTP and your new password.'}
               </p>
             </div>
-            
+
             {forgotStep === 1 ? (
               <>
                 <label className="sach-label">CNIC Number</label>
@@ -322,15 +340,31 @@ const LoginPage = () => {
             ) : (
               <>
                 <label className="sach-label">OTP Code</label>
-                <input className="sach-input" placeholder="000000" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g,'').slice(0,6))} maxLength={6} autoComplete="one-time-code" style={{ textAlign: 'center', fontSize: 20, letterSpacing: 8, fontWeight: 700, marginBottom: 16 }} />
-                
+                <input className="sach-input" placeholder="000000" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} maxLength={6} autoComplete="one-time-code" style={{ textAlign: 'center', fontSize: 20, letterSpacing: 8, fontWeight: 700, marginBottom: 16 }} />
+
                 <label className="sach-label">New Password</label>
                 <div className="sach-input-icon" style={{ marginBottom: 16 }}>
                   <span className="icon-left"><LockIcon size={16} color={colors.gold} /></span>
                   <input className="sach-input" type="password" placeholder="Min 8 characters" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" />
                 </div>
 
-                <button className="sach-btn sach-btn-gradient" style={{ marginTop: 12 }} onClick={handleForgotReset} disabled={isForgotLoading || otp.length !== 6 || newPassword.length < 8}>
+                <label className="sach-label">Confirm New Password</label>
+                <div className="sach-input-icon" style={{ marginBottom: confirmPassword && newPassword !== confirmPassword ? 4 : 20 }}>
+                  <span className="icon-left"><LockIcon size={16} color={confirmPassword && newPassword === confirmPassword ? colors.green : colors.gold} /></span>
+                  <input
+                    className="sach-input"
+                    type="password"
+                    placeholder="Re-enter new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    style={{ borderColor: confirmPassword && newPassword !== confirmPassword ? 'rgba(220,38,38,0.5)' : undefined }}
+                  />
+                </div>
+                {confirmPassword && newPassword !== confirmPassword && (
+                  <p className="field-error" style={{ marginBottom: 16 }}>Passwords do not match</p>
+                )}
+
+                <button className="sach-btn sach-btn-gradient" style={{ marginTop: 4 }} onClick={handleForgotReset} disabled={isForgotLoading || otp.length !== 6 || newPassword.length < 8 || newPassword !== confirmPassword}>
                   {isForgotLoading ? 'Resetting...' : 'Reset Password'}
                 </button>
               </>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { colors, formatCnic, formatPhone, validators, ShieldIcon, IdCardIcon, UserIcon, PhoneIcon, CheckCircleIcon, MessageIcon, ArrowLeft, ShieldCheckIcon, LockIcon, MailIcon, EyeIcon, EyeOffIcon } from '../theme';
+import sachLogo from '../assets/sach_logo.png';
 
 const SignupPage = () => {
   const navigate = useNavigate();
@@ -43,13 +44,13 @@ const SignupPage = () => {
 
   const handleRegister = async () => {
     if (!validate()) return;
-    
+
     setBackendError('');
     setIsLoading(true);
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const apiUrl = baseUrl.replace(/\/+$/, '');
-      
+      const baseUrl = import.meta.env.VITE_API_URL || 'https://sachbackend.live';
+      const apiUrl = baseUrl.replace(/\/+$/, '').replace(/\/api\/v1\/?$/i, '');
+
       // Step 1: Sign up
       const signupResponse = await fetch(`${apiUrl}/api/v1/user/signup`, {
         method: 'POST',
@@ -105,17 +106,26 @@ const SignupPage = () => {
 
       <div className="auth-topbar">
         <button className="auth-topbar-back" onClick={() => navigate('/')}><ArrowLeft size={16} color={colors.gold} /></button>
-        <div className="auth-topbar-brand">
-          <div className="auth-topbar-icon"><ShieldIcon size={14} color="#fff" /></div>
-          <span className="auth-topbar-text">SACH</span>
+        <div className="auth-topbar-brand" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <img src={sachLogo} alt="SACH Logo" style={{ height: 24, width: 'auto', objectFit: 'contain' }} />
+          <div style={{ width: 1, height: 14, background: colors.divider }} />
+          <span className="auth-topbar-text" style={{ color: colors.gold, fontWeight: 700, letterSpacing: 0.5, fontSize: 11 }}>PORTAL</span>
         </div>
       </div>
 
       <form className="auth-content" autoComplete="off" onSubmit={(e) => { e.preventDefault(); handleRegister(); }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div className="auth-icon-circle" style={{ borderColor: 'rgba(212,175,55,0.3)', background: 'linear-gradient(135deg, rgba(212,175,55,0.15), rgba(1,118,58,0.15))' }}>
-            <IdCardIcon size={26} color={colors.gold} />
-          </div>
+          <img
+            src={sachLogo}
+            alt="SACH Logo"
+            style={{
+              height: 80,
+              width: 'auto',
+              objectFit: 'contain',
+              marginBottom: 12,
+              filter: 'drop-shadow(0 0 16px rgba(212, 175, 55, 0.45))',
+            }}
+          />
           <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 6 }}>Citizen Registration</h2>
           <p style={{ fontSize: 13, color: colors.textSub }}>Register on SACH securely</p>
         </div>
@@ -188,7 +198,7 @@ const SignupPage = () => {
           <div>
             <span style={{ fontSize: 12, fontWeight: 700, color: colors.green }}>Secure Registration</span>
             <p style={{ fontSize: 11, color: colors.textSub, lineHeight: 1.5, marginTop: 4 }}>
-              Your details will be cross-referenced with the NADRA database to fetch your official permanent address.
+              Your details will be cross-referenced with secure identity records to verify and retrieve your details.
             </p>
           </div>
         </div>

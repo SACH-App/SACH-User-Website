@@ -4,6 +4,7 @@ import { useLanguage } from '../LanguageContext';
 import { useUser } from '../stores/UserStore';
 import { useAlerts } from '../stores/AlertStore';
 import { colors, gradients, DashboardIcon, FileIcon, PlusIcon, BellIcon, UserIcon, LogoutIcon } from '../theme';
+import sachLogo from '../assets/sach_logo.png';
 
 const navItems = [
   {
@@ -89,25 +90,28 @@ const Sidebar = ({ isOpen, onClose }) => {
           gap: 12,
           borderBottom: `1px solid ${colors.divider}`,
         }}>
+          <img
+            src={sachLogo}
+            alt="SACH Logo"
+            style={{
+              height: 36,
+              width: 'auto',
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 0 8px rgba(212, 175, 55, 0.3))',
+              cursor: 'pointer',
+            }}
+            onClick={() => navigate('/dashboard')}
+          />
           <div style={{
-            width: 36,
-            height: 36,
-            borderRadius: 8,
-            background: gradients.greenBtn,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 14,
-            fontWeight: 900,
-            color: '#fff',
-          }}>
-            S
-          </div>
+            width: 1,
+            height: 24,
+            background: colors.divider,
+          }} />
           <div>
-            <h1 style={{ fontSize: 14, fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>
-              SACH Citizens
+            <h1 style={{ fontSize: 11, fontWeight: 700, color: colors.gold, letterSpacing: 0.5, lineHeight: 1.2, textTransform: 'uppercase' }}>
+              Citizens
             </h1>
-            <p style={{ fontSize: 10, letterSpacing: 1.5, color: colors.emerald }}>
+            <p style={{ fontSize: 9, letterSpacing: 1.5, color: colors.emerald, fontWeight: 600 }}>
               e-FIR PORTAL
             </p>
           </div>

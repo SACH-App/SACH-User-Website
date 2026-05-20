@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { colors, UserIcon, CheckCircleIcon, IdCardIcon, PhoneIcon, MailIcon, EditIcon, MapPinIcon, HomeIcon, SettingsIcon, GlobeIcon, ShieldCheckIcon, LogoutIcon, ChevronRight } from '../theme';
 import { useLanguage } from '../LanguageContext';
@@ -6,8 +6,9 @@ import { useUser } from '../stores/UserStore';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, isUrdu, toggleLang } = useLanguage();
   const { profile, loading, logout } = useUser();
+  const [showLangMenu, setShowLangMenu] = useState(false);
 
   if (loading || !profile) {
     return <div style={{ padding: 20, textAlign: 'center' }}>Loading profile...</div>;
@@ -56,10 +57,121 @@ const ProfilePage = () => {
           <span style={{ flex: 1 }}>Account Settings</span>
           <ChevronRight size={16} color={colors.textSub} />
         </div>
-        <div className="settings-tile hoverable">
+        <div className="settings-tile" style={{ cursor: 'default', overflow: 'visible' }}>
           <GlobeIcon size={18} color={colors.gold} />
           <span style={{ flex: 1 }}>Language Preferences</span>
-          <ChevronRight size={16} color={colors.textSub} />
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowLangMenu(!showLangMenu)}
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: `1px solid ${colors.divider}`,
+                borderRadius: 8,
+                color: colors.gold,
+                fontSize: 12,
+                fontWeight: 600,
+                padding: '6px 12px',
+                cursor: 'pointer',
+                outline: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              {isUrdu ? 'اردو' : 'English'}
+              <span style={{ 
+                transform: showLangMenu ? 'rotate(-90deg)' : 'rotate(90deg)', 
+                transition: 'transform 0.2s ease',
+                display: 'inline-block',
+                lineHeight: 1
+              }}>
+                <ChevronRight size={12} color={colors.gold} />
+              </span>
+            </button>
+
+            {showLangMenu && (
+              <>
+                <div 
+                  onClick={() => setShowLangMenu(false)} 
+                  style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 999
+                  }}
+                />
+                <div 
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 6px)',
+                    right: 0,
+                    background: '#0D1E11',
+                    border: '1px solid rgba(212,175,55,0.35)',
+                    borderRadius: 8,
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.6)',
+                    width: 100,
+                    zIndex: 1000,
+                    overflow: 'hidden',
+                    animation: 'slideUp 0.15s ease'
+                  }}
+                >
+                  <div
+                    onClick={() => {
+                      if (isUrdu) toggleLang();
+                      setShowLangMenu(false);
+                    }}
+                    style={{
+                      padding: '10px 14px',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: !isUrdu ? colors.gold : 'rgba(255,255,255,0.7)',
+                      background: !isUrdu ? 'rgba(212,175,55,0.08)' : 'transparent',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      borderBottom: `1px solid ${colors.divider}`
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(212,175,55,0.12)';
+                      e.currentTarget.style.color = colors.gold;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = !isUrdu ? 'rgba(212,175,55,0.08)' : 'transparent';
+                      e.currentTarget.style.color = !isUrdu ? colors.gold : 'rgba(255,255,255,0.7)';
+                    }}
+                  >
+                    English
+                  </div>
+                  <div
+                    onClick={() => {
+                      if (!isUrdu) toggleLang();
+                      setShowLangMenu(false);
+                    }}
+                    style={{
+                      padding: '10px 14px',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: isUrdu ? colors.gold : 'rgba(255,255,255,0.7)',
+                      background: isUrdu ? 'rgba(212,175,55,0.08)' : 'transparent',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(212,175,55,0.12)';
+                      e.currentTarget.style.color = colors.gold;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = isUrdu ? 'rgba(212,175,55,0.08)' : 'transparent';
+                      e.currentTarget.style.color = isUrdu ? colors.gold : 'rgba(255,255,255,0.7)';
+                    }}
+                  >
+                    اردو
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
         <div className="settings-tile hoverable" onClick={logout} style={{ color: colors.red }}>
           <LogoutIcon size={18} color={colors.red} />
